@@ -17,7 +17,6 @@ poolsize = 2
 mapss = {3, 32, 64, 128, 256} -- layer maps sizes
 
 layer={}
-A={} P={} cA={} mA={} cP={} cR={} E={} R={} up={}
 -- P = prediction branch, A_hat in paper
 
 nlayers = 2
@@ -30,42 +29,42 @@ nlayers = 2
 
 -- define all layers function:
 for L = 1, nlayers do
-   cA[L] = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
-   cR[L] = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent
-   cP[L] = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
-   mA[L] = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
-   up[L] = nn.SpatialUpSamplingNearest(poolsize)
+   cA = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
+   cR = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent
+   cP = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
+   mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
+   up = nn.SpatialUpSamplingNearest(poolsize)
 end
 
--- input = nn.Identity()()
+input = nn.Identity()()
 inputs = {}
 outputs = {}
 table.insert(inputs, nn.Identity()()) -- input image x
 for L = 1, nlayers do
-   -- table.insert(inputs, nn.Identity()()) -- prev E
-   table.insert(inputs, nn.Identity()()) -- prev R
-   -- P[L] = torch.zeros(mapss[L], insize/(poolsize^(L-1)), insize/(poolsize^(L-1)))
+   table.insert(inputs, nn.Identity()()) -- previous E
+   table.insert(inputs, nn.Identity()()) -- next R
 end
 
-for L = 1, nlayers do
-      if L == 1 then
-         A[L] = inputs[1] - cA[L] - mA[L] - nn.ReLU()
-      else
-         A[L] = E[L-1] - cA[L] - mA[L] - nn.ReLU()
-      end
-      E[L] = {A[L], P[L]} - nn.CSubTable() - nn.PReLU(mapss[L+1]) -- PReLU instead of +/-ReLU
-      -- table.insert(outputs, E[L])
-end
-
-for L = nlayers, 1 do
-      if L == nlayers then
-         R[L] = {E[L]} - cR[L]
-      else
-         upR = up[L] - R[L+1]
-         R[L] = {E[L], upR} - nn.CAddTable(1) - cR[L]
-      end
-      P[L] = {R[L]} - cP[L] - nn.ReLU()
-      -- table.insert(outputs, R[L])
+for L = 0, nlayers do
+   print('Creating layer:', L)
+   if L == 0 then
+      pE = inputs[1]
+   else
+      pE = inputs[2*L] -- previous E
+   end
+   pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}}
+   A = pE - cA - mA - nn.ReLU()
+   
+   if L >= 1 then
+      nR = inputs[2*L+1] -- next R
+      upR = {nR} - up
+      R = {E, upR} - nn.CAddTable(1) - cR
+      P = {R} - cP - nn.ReLU()
+   end
+   E = {A, P} - nn.CSubTable() - nn.PReLU(mapss[L+1]) -- PReLU instead of +/-ReLU
+   E:annotate{graphAttributes = {color = 'blue', fontcolor = 'blue'}}
+   table.insert(outputs, E)
+   table.insert(outputs, R)
 end
 
 model = nn.gModule(inputs, outputs)
