@@ -31,7 +31,7 @@ table.insert(inputs, nn.Identity()()) -- input image x
 for L = 1, nlayers do
    if L > 1 then table.insert(inputs, nn.Identity()()) end-- previous E
    table.insert(inputs, nn.Identity()()) -- next R
-end
+end -- {input, R, E, R, E} R index 2*L, E index 2*L+1
 
 for L = 1, nlayers do
    print('Creating layer:', L)
@@ -41,23 +41,23 @@ for L = 1, nlayers do
    local cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent
    local cP = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
    local mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
-   -- local up = nn.SpatialUpSamplingNearest(poolsize)
+   local up = nn.SpatialUpSamplingNearest(poolsize)
    local op = nn.PReLU(mapss[L+1])
 
    if L == 1 then
       pE = inputs[1]
    else
-      pE = inputs[2*L+1] -- previous E
+      pE = inputs[2*L-1] -- previous E
    end
    pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}}
    A = pE - cA - mA - nn.ReLU()
    
    nR = inputs[2*L] -- next R
-   -- upR = {nR} - up
    if L == 1 then
       R = nR
    else
-      R = {E, nR} - nn.CAddTable() - cR
+      upR = {nR} - up
+      R = {E, upR} - nn.CAddTable() - cR
    end
    P = {R} - cP - nn.ReLU()
    E = {A, P} - nn.CSubTable() - op -- PReLU instead of +/-ReLU
@@ -75,8 +75,8 @@ graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 testx = {}
 table.insert(testx, torch.Tensor(mapss[1], insize, insize)) -- input
 for L = 1, nlayers do
-   if L > 1 then table.insert(testx, torch.zeros(mapss[L], insize / poolsize, insize / poolsize)) end-- previous E
-   table.insert(testx, torch.zeros(mapss[L+1], insize / poolsize, insize / poolsize)) -- next R
+   if L > 1 then table.insert(testx, torch.zeros(mapss[L], insize / poolsize^(L-1), insize / poolsize^(L-1))) end-- previous E
+   table.insert(testx, torch.zeros(mapss[L+1], insize / poolsize^L, insize / poolsize^L)) -- next R
 end
 out = model:forward(testx)
    -- -- graph.dot(model.fg, 'MatchNet-model','Model') -- graph the model!
