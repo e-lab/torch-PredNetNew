@@ -18,7 +18,7 @@ mapss = {3, 32, 64, 128, 256} -- layer maps sizes
 layer={}
 -- P = prediction branch, A_hat in paper
 
-nlayers = 1
+nlayers = 2
 
 -- define all layers function:
 for L = 1, nlayers do
@@ -31,7 +31,7 @@ table.insert(inputs, nn.Identity()()) -- input image x
 for L = 1, nlayers do
    if L > 1 then table.insert(inputs, nn.Identity()()) end-- previous E
    table.insert(inputs, nn.Identity()()) -- next R
-end -- {input, R, E, R, E} R index 2*L, E index 2*L+1
+end -- {input, R, E, R, E}; R index = 2*L; E index = 2*L+1
 
 for L = 1, nlayers do
    print('Creating layer:', L)
@@ -73,10 +73,12 @@ graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 -- test:
 testx = {}
+fixedmmap = 32 -- fixed number of maps in E and R
 table.insert(testx, torch.Tensor(mapss[1], insize, insize)) -- input
+-- sizes: input = 64, R = 32 , E = 32 , R = 16, E = 16 ...
 for L = 1, nlayers do
-   if L > 1 then table.insert(testx, torch.zeros(mapss[L], insize / poolsize^(L-1), insize / poolsize^(L-1))) end-- previous E
-   table.insert(testx, torch.zeros(mapss[L+1], insize / poolsize^L, insize / poolsize^L)) -- next R
+   if L > 1 then table.insert(testx, torch.zeros(mapss[L], insize / poolsize^(L-2), insize / poolsize^(L-2))) end-- previous E
+   table.insert(testx, torch.zeros(fixedmmap, insize / poolsize^L, insize / poolsize^L)) -- next R
 end
 out = model:forward(testx)
    -- -- graph.dot(model.fg, 'MatchNet-model','Model') -- graph the model!
