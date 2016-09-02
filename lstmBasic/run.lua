@@ -12,5 +12,5 @@ h = torch.Tensor(7)
 
 i = {x,c,h}
 
-o = m:updataOutput(i)
+o = m:forward(i)
 print(o)
