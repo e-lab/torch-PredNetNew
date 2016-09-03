@@ -10,28 +10,28 @@ torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
 
 -- one layer, not time dependency:
-insize = 64
-input_stride = 1
-poolsize = 2
-mapss = {3, 32, 64, 128, 256} -- layer maps sizes
+local insize = 64
+local input_stride = 1
+local poolsize = 2
+local mapss = {3, 32, 64, 128, 256} -- layer maps sizes
 
-layer={}
+local layer={}
 -- P = prediction branch, A_hat in paper
 
-nlayers = 2
+local nlayers = 1
 
--- define all layers function:
-for L = 1, nlayers do
-end
-
+-- creating input and output lists:
 local input = nn.Identity()()
-local inputs = {}
-local outputs = {}
+local inputs = {} -- inputs = {inputs, previousD, nextR}
+local outputs = {} -- outputs = {E, R}, D == discriminator output, R == generator output
 table.insert(inputs, nn.Identity()()) -- input image x
 for L = 1, nlayers do
-   if L > 1 then table.insert(inputs, nn.Identity()()) end-- previous E
+   -- {input, E, R, E, R, ...}; R index = 2*L+1; E index = 2*L
+   table.insert(inputs, nn.Identity()()) -- previous E
    table.insert(inputs, nn.Identity()()) -- next R
-end -- {input, R, E, R, E}; R index = 2*L; E index = 2*L+1
+   table.insert(outputs, nn.Identity()()) -- previous E
+   table.insert(outputs, nn.Identity()()) -- next R
+end
 
 for L = 1, nlayers do
    print('Creating layer:', L)
@@ -41,46 +41,38 @@ for L = 1, nlayers do
    local cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent
    local cP = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
    local mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
-   local up = nn.SpatialUpSamplingNearest(poolsize)
+   -- local up = nn.SpatialUpSamplingNearest(poolsize)
    local op = nn.PReLU(mapss[L+1])
 
+   local pE, A, nR, R, P, E
+
    if L == 1 then
-      pE = inputs[1]
+      pE = inputs[1] -- model input (input image)
    else
-      pE = inputs[2*L-1] -- previous E
+      pE = outputs[2*L-1] -- previous layer E
    end
    pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}}
    A = pE - cA - mA - nn.ReLU()
    
-   nR = inputs[2*L] -- next R
-   if L == 1 then
-      R = nR
+
+   if L == nlayer then
+      R = E - cR
    else
-      upR = {nR} - up
-      R = {E, upR} - nn.CAddTable() - cR
+      nR = outputs[2*L+2] -- next layer R
+      R = {E, nR} - nn.CAddTable(1) - cR
    end
    P = {R} - cP - nn.ReLU()
-   E = {A, P} - nn.CSubTable() - op -- PReLU instead of +/-ReLU
+   E = {A, P} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
    E:annotate{graphAttributes = {color = 'blue', fontcolor = 'blue'}}
-   table.insert(outputs, E)
-   table.insert(outputs, R)
+   table.insert(outputs, E) -- this layer E
+   table.insert(outputs, R) -- this layer R
 end
 -- create graph
-model = nn.gModule(inputs, outputs)
+print('Creating model:')
+local model = nn.gModule(inputs, outputs)
 nngraph.annotateNodes()
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 -- test:
-testx = {}
-fixedmmap = 32 -- fixed number of maps in E and R
-table.insert(testx, torch.Tensor(mapss[1], insize, insize)) -- input
--- sizes: input = 64, R = 32 , E = 32 , R = 16, E = 16 ...
-for L = 1, nlayers do
-   if L > 1 then table.insert(testx, torch.zeros(mapss[L], insize / poolsize^(L-2), insize / poolsize^(L-2))) end-- previous E
-   table.insert(testx, torch.zeros(fixedmmap, insize / poolsize^L, insize / poolsize^L)) -- next R
-end
-out = model:forward(testx)
-   -- -- graph.dot(model.fg, 'MatchNet-model','Model') -- graph the model!
--- print('output size:', out:size())
-print('output:', out)
+-- print('Testing model:')
