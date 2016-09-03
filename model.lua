@@ -21,16 +21,15 @@ local layer={}
 local nlayers = 1
 
 -- creating input and output lists:
-local input = nn.Identity()()
-local inputs = {} -- inputs = {inputs, previousD, nextR}
-local outputs = {} -- outputs = {E, R}, D == discriminator output, R == generator output
-table.insert(inputs, nn.Identity()()) -- input image x
+local inputs = {} -- inputs = {prevE, nextR}
+local outputs = {} -- outputs = {E , R}, E == discriminator output, R == generator output
+table.insert(inputs, nn.Identity()()) -- insert model input / image
 for L = 1, nlayers do
    -- {input, E, R, E, R, ...}; R index = 2*L+1; E index = 2*L
    table.insert(inputs, nn.Identity()()) -- previous E
    table.insert(inputs, nn.Identity()()) -- next R
-   table.insert(outputs, nn.Identity()()) -- previous E
-   table.insert(outputs, nn.Identity()()) -- next R
+   table.insert(outputs, nn.Identity()()) -- E
+   table.insert(outputs, nn.Identity()()) -- R
 end
 
 for L = 1, nlayers do
@@ -44,7 +43,7 @@ for L = 1, nlayers do
    local up = nn.SpatialUpSamplingNearest(poolsize)
    local op = nn.PReLU(mapss[L+1])
 
-   local pE, A, nR, R, P, E
+   local pE, A, upR, R, P, E
 
    if L == 1 then
       pE = inputs[1] -- model input (input image)
@@ -53,13 +52,14 @@ for L = 1, nlayers do
    end
    pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}}
    A = pE - cA - mA - nn.ReLU()
-   
-   if L == nlayer then
-      R = E - cR
+
+   if L == nlayers then
+      R = pE - cR
    else
-      upR = outputs[2*L+2] - up -- upsampling of next layer R
-      R = {E, upR} - nn.CAddTable(1) - cR
+      upR = outputs[2*L] - up -- upsampling of next layer R
+      R = {pE, upR} - nn.CAddTable(1) - cR
    end
+
    P = {R} - cP - nn.ReLU()
    E = {A, P} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
    E:annotate{graphAttributes = {color = 'blue', fontcolor = 'blue'}}
