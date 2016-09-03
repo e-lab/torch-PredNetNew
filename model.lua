@@ -38,10 +38,10 @@ for L = 1, nlayers do
 
    -- define layer functions:
    local cA = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
-   local cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent
+   local cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent / convLSTM temp model
    local cP = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
    local mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
-   -- local up = nn.SpatialUpSamplingNearest(poolsize)
+   local up = nn.SpatialUpSamplingNearest(poolsize)
    local op = nn.PReLU(mapss[L+1])
 
    local pE, A, nR, R, P, E
@@ -54,12 +54,11 @@ for L = 1, nlayers do
    pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}}
    A = pE - cA - mA - nn.ReLU()
    
-
    if L == nlayer then
       R = E - cR
    else
-      nR = outputs[2*L+2] -- next layer R
-      R = {E, nR} - nn.CAddTable(1) - cR
+      upR = outputs[2*L+2] - up -- upsampling of next layer R
+      R = {E, upR} - nn.CAddTable(1) - cR
    end
    P = {R} - cP - nn.ReLU()
    E = {A, P} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
