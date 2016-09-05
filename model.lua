@@ -18,7 +18,7 @@ local mapss = {3, 32, 64, 128, 256} -- layer maps sizes
 local layer={}
 -- P = prediction branch, A_hat in paper
 
-local nlayers = 1
+local nlayers = 2
 
 -- This module creates the MatchNet network model, defined as:
 -- inputs = {prevE, nextR}
@@ -47,11 +47,7 @@ for L = 1, nlayers do
 
    local pE, A, upR, R, P, E
 
-   if L == 1 then
-      pE = inputs[1] -- model input (input image)
-   else
-      pE = outputs[2*L-1] -- previous layer E
-   end
+   pE = inputs[3*L-2] -- previous layer E
    pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}}
    A = pE - cA - mA - nn.ReLU()
 
