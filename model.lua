@@ -1,7 +1,6 @@
 -- Eugenio Culurciello
 -- August 2016
 -- MatchNet: a model of PredNet from: https://arxiv.org/abs/1605.08104
--- Chainer implementation conversion based on: https://github.com/quadjr/PredNet/blob/master/net.py
 
 require 'nn'
 require 'nngraph'
@@ -21,7 +20,7 @@ local layer={}
 local nlayers = 2
 
 -- This module creates the MatchNet network model, defined as:
--- inputs = {prevE, nextR}
+-- inputs = {prevE, thisE, nextR}
 -- outputs = {E , R}, E == discriminator output, R == generator output
 
 -- creating input and output lists:
