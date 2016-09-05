@@ -29,13 +29,9 @@ local inputs = {}
 local outputs = {}
 table.insert(inputs, nn.Identity()()) -- insert model input / image
 for L = 1, nlayers do
-   -- input: {input, pE, tE, nR, ...}
-   inputs[3*L-2] =  nn.Identity()() -- previous E
+   inputs[3*L-2] = nn.Identity()() -- previous E
    inputs[3*L-1] = nn.Identity()() -- this E
-   inputs[3*L] = nn.Identity()() -- next R
-   -- output has to be defined for upper layer values to propagate to lowers
-   -- outputs[2*L-1] = nn.Identity()() -- this layer E
-   -- outputs[2*L] = nn.Identity()() -- this layer R
+   if L < nlayers then inputs[3*L] = nn.Identity()() end -- next R
 end
 
 for L = 1, nlayers do
