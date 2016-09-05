@@ -1,4 +1,5 @@
 -- First written by Sangpil Kim 
+-- ConvLSTM with nngraph
 -- August 2016
 
 require 'nn'
