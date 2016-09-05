@@ -1,17 +1,24 @@
+-- First written by Sangpil Kim 
+-- August 2016
+
 require 'nn'
 require 'cunn'
 require 'cudnn'
 require 'nngraph'
+
+-- Set up backend
 local backend = cudnn
 local sc = backend.SpatialConvolution
 local scNB = backend.SpatialConvolution:noBias()
 local sg = backend.Sigmoid
---n is the number of layers
-function lstm(inDim, outDim, kw, kh, st, pa, n, dropout)
+
+function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
   local dropout = dropout or 0 
   local stw, sth = st, st
   local paw, pah = pa, pa
-  -- there will be 2*n+1 inputs
+  local n = layerNum
+  -- Input  is 1+ 2*#Layer
+  -- Output is 1+ 2*#Layer
   local inputs = {}
   table.insert(inputs, nn.Identity()()) -- x
   for L = 1,n do
@@ -34,34 +41,34 @@ function lstm(inDim, outDim, kw, kh, st, pa, n, dropout)
       if dropout > 0 then x = nn.Dropout(dropout)(x) end -- apply dropout, if any
     end
     -- In put convolution
-    local i2h, i2h2, i2h3, i2h4
+    local i2Ig, i2Fg, i2Og, i2It
     if L == 1 then
-       i2h  = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h_'..L}
-       i2h2 = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h2_'..L}
-       i2h3 = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h3_'..L}
-       i2h4 = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h4_'..L}
+       i2Ig  = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Ig_'..L}
+       i2Fg = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Fg_'..L}
+       i2Og = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Og_'..L}
+       i2It = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2It_'..L}
     else
-       i2h  = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h_'..L}
-       i2h2 = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h2_'..L}
-       i2h3 = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h3_'..L}
-       i2h4 = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2h4_'..L}
+       i2Ig  = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Ig_'..L}
+       i2Fg = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Fg_'..L}
+       i2Og = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Og_'..L}
+       i2It = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2It_'..L}
     end
 
-    local h2h  = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevH):annotate{name='h2h_'..L}
-    local h2h2 = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevH):annotate{name='h2h2_'..L}
-    local h2h3 = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevC):annotate{name='h2h3_'..L}
-    local h2h4 = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevC):annotate{name='h2h4_'..L}
+    local h2Ig  = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevH):annotate{name='h2Ig_'..L}
+    local h2Fg = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevH):annotate{name='h2Fg_'..L}
+    local h2Og = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevC):annotate{name='h2Og_'..L}
+    local h2It = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevC):annotate{name='h2It_'..L}
 
-    local n1 = nn.CAddTable()({i2h, h2h})
-    local n2 = nn.CAddTable()({i2h2, h2h2})
-    local n3 = nn.CAddTable()({i2h3, h2h3})
-    local n4 = nn.CAddTable()({i2h4, h2h4})
+    local ig = nn.CAddTable()({i2Ig, h2Ig})
+    local fg = nn.CAddTable()({i2Fg, h2Fg})
+    local og = nn.CAddTable()({i2Og, h2Og})
+    local it = nn.CAddTable()({i2It, h2It})
 
     -- Gates calculation
-    local inGate = sg()(n1)
-    local fgGate = sg()(n2)
-    local ouGate = sg()(n3)
-    local inTanh = cudnn.Tanh()(n4)
+    local inGate = sg()(ig)
+    local fgGate = sg()(fg)
+    local ouGate = sg()(og)
+    local inTanh = cudnn.Tanh()(it)
     -- perform the LSTM update
     local nextC           = nn.CAddTable()({
         nn.CMulTable()({fgGate, prevC}),
