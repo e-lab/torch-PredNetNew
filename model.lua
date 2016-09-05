@@ -1,9 +1,11 @@
 -- Eugenio Culurciello
 -- August 2016
 -- MatchNet: a model of PredNet from: https://arxiv.org/abs/1605.08104
+-- Chainer implementation conversion based on: https://github.com/quadjr/PredNet/blob/master/net.py
 
 require 'nn'
 require 'nngraph'
+local c = require 'trepl.colorize'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
@@ -17,7 +19,7 @@ local mapss = {3, 32, 64, 128, 256} -- layer maps sizes
 local layer={}
 -- P = prediction branch, A_hat in paper
 
-local nlayers = 2
+local nlayers = 1
 
 -- This module creates the MatchNet network model, defined as:
 -- inputs = {prevE, thisE, nextR}
@@ -26,7 +28,6 @@ local nlayers = 2
 -- creating input and output lists:
 local inputs = {}
 local outputs = {}
-table.insert(inputs, nn.Identity()()) -- insert model input / image
 for L = 1, nlayers do
    inputs[3*L-2] = nn.Identity()() -- previous E
    inputs[3*L-1] = nn.Identity()() -- this E
@@ -38,7 +39,7 @@ for L = 1, nlayers do
 
    -- define layer functions:
    local cA = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
-   local cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent / convLSTM temp model
+   local cR = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent / convLSTM temp model
    local cP = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
    local mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
    local up = nn.SpatialUpSamplingNearest(poolsize)
@@ -69,8 +70,20 @@ end
 print('Creating model:')
 local model = nn.gModule(inputs, outputs)
 nngraph.annotateNodes()
-graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+-- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 -- test:
--- print('Testing model:')
+print('Testing model:')
+
+-- local nT = 1 -- time sequence length
+local inTable = {}
+-- local outTable = {}
+for L = 1, nlayers do
+   table.insert(inTable, torch.ones(mapss[L], 64, 64)) -- prev E
+   table.insert(inTable, torch.zeros(mapss[L+1], 32, 32)) -- this E
+   if L < nlayers then table.insert(inTable, torch.zeros(mapss[L+1], 32, 32)) end -- next R
+end
+outTable = model:forward(inTable)
+print(outTable)
+graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
