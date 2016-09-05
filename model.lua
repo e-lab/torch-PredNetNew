@@ -20,16 +20,22 @@ local layer={}
 
 local nlayers = 1
 
+-- This module creates the MatchNet network model, defined as:
+-- inputs = {prevE, nextR}
+-- outputs = {E , R}, E == discriminator output, R == generator output
+
 -- creating input and output lists:
-local inputs = {} -- inputs = {prevE, nextR}
-local outputs = {} -- outputs = {E , R}, E == discriminator output, R == generator output
+local inputs = {}
+local outputs = {}
 table.insert(inputs, nn.Identity()()) -- insert model input / image
 for L = 1, nlayers do
-   -- {input, E, R, E, R, ...}; R index = 2*L+1; E index = 2*L
-   table.insert(inputs, nn.Identity()()) -- previous E
-   table.insert(inputs, nn.Identity()()) -- next R
-   table.insert(outputs, nn.Identity()()) -- E
-   table.insert(outputs, nn.Identity()()) -- R
+   -- input: {input, pE, tE, nR, ...}
+   inputs[3*L-2] =  nn.Identity()() -- previous E
+   inputs[3*L-1] = nn.Identity()() -- this E
+   inputs[3*L] = nn.Identity()() -- next R
+   -- output has to be defined for upper layer values to propagate to lowers
+   -- outputs[2*L-1] = nn.Identity()() -- this layer E
+   -- outputs[2*L] = nn.Identity()() -- this layer R
 end
 
 for L = 1, nlayers do
@@ -54,18 +60,20 @@ for L = 1, nlayers do
    A = pE - cA - mA - nn.ReLU()
 
    if L == nlayers then
-      R = pE - cR
+      R = inputs[3*L-1] - cR -- this E = inputs[3*L-1] in this layer!
    else
-      upR = outputs[2*L] - up -- upsampling of next layer R
-      R = {pE, upR} - nn.CAddTable(1) - cR
+      upR = inputs[3*L] - up -- upsampling of next layer R
+      R = {inputs[3*L-1], upR} - nn.CAddTable(1) - cR -- this E = inputs[3*L-1] in this layer!
    end
 
    P = {R} - cP - nn.ReLU()
    E = {A, P} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
    E:annotate{graphAttributes = {color = 'blue', fontcolor = 'blue'}}
-   table.insert(outputs, E) -- this layer E
-   table.insert(outputs, R) -- this layer R
+   -- set outputs:
+   outputs[2*L-1] = E -- this layer E
+   outputs[2*L] = R -- this layer R
 end
+
 -- create graph
 print('Creating model:')
 local model = nn.gModule(inputs, outputs)
