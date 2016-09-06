@@ -7,20 +7,10 @@ require 'nn'
 require 'nngraph'
 local c = require 'trepl.colorize'
 
-torch.setdefaulttensortype('torch.FloatTensor')
-nngraph.setDebug(true)
 
--- one layer, not time dependency:
-local insize = 64
-local input_stride = 1
-local poolsize = 2
-local mapss = {3, 32, 64, 128, 256} -- layer maps sizes
-
+function mNet(nlayers,input_stride,poolsize,mapss)
 local layer={}
 -- P = prediction branch, A_hat in paper
-
-local nlayers = 1
-
 -- This module creates the MatchNet network model, defined as:
 -- inputs = {prevE, thisE, nextR}
 -- outputs = {E , R}, E == discriminator output, R == generator output
@@ -66,24 +56,6 @@ for L = 1, nlayers do
    outputs[2*L] = R -- this layer R
 end
 
--- create graph
-print('Creating model:')
-local model = nn.gModule(inputs, outputs)
-nngraph.annotateNodes()
--- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+return nn.gModule(inputs, outputs)
 
-
--- test:
-print('Testing model:')
-
--- local nT = 1 -- time sequence length
-local inTable = {}
--- local outTable = {}
-for L = 1, nlayers do
-   table.insert(inTable, torch.ones(mapss[L], 64, 64)) -- prev E
-   table.insert(inTable, torch.zeros(mapss[L+1], 32, 32)) -- this E
-   if L < nlayers then table.insert(inTable, torch.zeros(mapss[L+1], 32, 32)) end -- next R
 end
-outTable = model:forward(inTable)
-print(outTable)
-graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
