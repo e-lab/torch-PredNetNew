@@ -80,9 +80,9 @@ print('Testing model:')
 local inTable = {}
 -- local outTable = {}
 for L = 1, nlayers do
-   table.insert(inTable, torch.ones(mapss[L], 64, 64)) -- prev E
-   table.insert(inTable, torch.zeros(mapss[L+1], 32, 32)) -- this E
-   if L < nlayers then table.insert(inTable, torch.zeros(mapss[L+1], 32, 32)) end -- next R
+   table.insert(inTable, torch.ones(mapss[L], insize/2^L, insize/2^L)) -- prev E
+   table.insert(inTable, torch.zeros(mapss[L+1], insize/2^(L+1), insize/2^(L+1))) -- this E
+   if L < nlayers then table.insert(inTable, torch.zeros(mapss[L+1], insize/2^(L+2), insize/2^(L+2))) end -- next R
 end
 outTable = model:forward(inTable)
 print(outTable)
