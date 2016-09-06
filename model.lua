@@ -19,7 +19,7 @@ local mapss = {3, 32, 64, 128, 256} -- layer maps sizes
 local layer={}
 -- P = prediction branch, A_hat in paper
 
-local nlayers = 1
+local nlayers = 2
 
 -- This module creates the MatchNet network model, defined as:
 -- inputs = {prevE, thisE, nextR}
@@ -80,10 +80,10 @@ print('Testing model:')
 local inTable = {}
 -- local outTable = {}
 for L = 1, nlayers do
-   table.insert(inTable, torch.ones(mapss[L], insize/2^L, insize/2^L)) -- prev E
-   table.insert(inTable, torch.zeros(mapss[L+1], insize/2^(L+1), insize/2^(L+1))) -- this E
-   if L < nlayers then table.insert(inTable, torch.zeros(mapss[L+1], insize/2^(L+2), insize/2^(L+2))) end -- next R
+   table.insert(inTable, torch.ones(mapss[L], insize/2^(L-1), insize/2^(L-1))) -- prev E
+   table.insert(inTable, torch.zeros(mapss[L+1], insize/2^(L), insize/2^(L))) -- this E
+   if L < nlayers then table.insert(inTable, torch.zeros(mapss[L+1], insize/2^(L+1), insize/2^(L+1))) end -- next R
 end
-outTable = model:forward(inTable)
+local outTable = model:forward(inTable)
 print(outTable)
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
