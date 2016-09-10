@@ -1,20 +1,18 @@
--- First written by Sangpil Kim 
+-- First written by Sangpil Kim
 -- ConvLSTM with nngraph
 -- August 2016
 
 require 'nn'
-require 'cunn'
-require 'cudnn'
 require 'nngraph'
 
 -- Set up backend
-local backend = cudnn
+local backend = nn
 local sc = backend.SpatialConvolution
-local scNB = backend.SpatialConvolution:noBias()
+local scNB = backend.SpatialConvolution
 local sg = backend.Sigmoid
 
 function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
-  local dropout = dropout or 0 
+  local dropout = dropout or 0
   local stw, sth = st, st
   local paw, pah = pa, pa
   local n = layerNum
@@ -27,18 +25,18 @@ function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
     table.insert(inputs, nn.Identity()()) -- prevH[L]
   end
 
-  local x 
+  local x
   local outputs = {}
   for L = 1,n do
      -- Container for previous C and H
     local prevH = inputs[L*2+1]
     local prevC = inputs[L*2]
     -- Setup input
-    if L == 1 then 
+    if L == 1 then
       x = inputs[1] --This form is from neuraltalk2
-    else 
+    else
     -- Prev hidden output
-      x = outputs[(L-1)*2] 
+      x = outputs[(L-1)*2]
       if dropout > 0 then x = nn.Dropout(dropout)(x) end -- apply dropout, if any
     end
     -- In put convolution
@@ -69,7 +67,7 @@ function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
     local inGate = sg()(ig)
     local fgGate = sg()(fg)
     local ouGate = sg()(og)
-    local inTanh = cudnn.Tanh()(it)
+    local inTanh = backend.Tanh()(it)
     -- perform the LSTM update
     local nextC           = nn.CAddTable()({
         nn.CMulTable()({fgGate, prevC}),
@@ -77,7 +75,7 @@ function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
       })
     -- gated cells form the output
     local nextH = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
-    
+
     table.insert(outputs, nextC)
     table.insert(outputs, nextH)
   end
@@ -85,8 +83,8 @@ function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
   -- Get last output
   local lastH = outputs[#outputs]
   --Apply dropout
-  if dropout > 0 then lastH = nn.Dropout(dropout)(lastH):annotate{name='drop_final'} end
-  table.insert(outputs, lastH)
+  if dropout > 0 then lstHD = nn.Dropout(dropout)(lastH):annotate{name='drop_final'} end
+  table.insert(outputs, lastHD)
 
   return nn.gModule(inputs, outputs)
 end
