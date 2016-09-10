@@ -85,8 +85,8 @@ function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
   -- Get last output
   local lastH = outputs[#outputs]
   --Apply dropout
-  if dropout > 0 then lastH = nn.Dropout(dropout)(lastH):annotate{name='drop_final'} end
-  table.insert(outputs, lastH)
+  if dropout > 0 then lastHD = nn.Dropout(dropout)(lastH):annotate{name='drop_final'} end
+  table.insert(outputs, lastHD)
 
   return nn.gModule(inputs, outputs)
 end
