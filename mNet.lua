@@ -5,10 +5,13 @@
 
 require 'nn'
 require 'nngraph'
+require 'models.ConvLSTM'
+require 'models.UntiedConvLSTM'
 local c = require 'trepl.colorize'
+require 'cudnn'
+backend = cudnn
 
-
-function mNet(nlayers,input_stride,poolsize,mapss)
+function mNet(nlayers,input_stride,poolsize,mapss,clOpt)
 local layer={}
 -- P = prediction branch, A_hat in paper
 -- This module creates the MatchNet network model, defined as:
@@ -23,15 +26,17 @@ for L = 1, nlayers do
    inputs[3*L-1] = nn.Identity()() -- this E
    if L < nlayers then inputs[3*L] = nn.Identity()() end -- next R
 end
-
+local nSeq = clOpt.nSeq
+local clStride= clOpt.stride
 for L = 1, nlayers do
    print('Creating layer:', L)
 
    -- define layer functions:
-   local cA = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
-   local cR = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent / convLSTM temp model
-   local cP = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
-   local mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
+   local cA = backend.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
+   --local cR = backend.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent / convLSTM temp model
+   local cR = nn.UntiedConvLSTM(mapss[L+1], mapss[L+1], nSeq, 3, 3, clStride)
+   local cP = backend.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- P convolution
+   local mA = backend.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
    local up = nn.SpatialUpSamplingNearest(poolsize)
    local op = nn.PReLU(mapss[L+1])
 
