@@ -21,7 +21,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    local inputs = {}
    local outputs = {}
    for L = 1, nlayers do
-      inputs[3*L-2] = nn.Identity()() -- previous E
+      inputs[3*L-2] = nn.Identity()() -- previous layer E / input
       inputs[3*L-1] = nn.Identity()() -- this E
       if L < nlayers then inputs[3*L] = nn.Identity()() end -- next R
    end
@@ -40,7 +40,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       if testing then
          cR = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- recurrent / convLSTM temp model
       else
-         cR = nn.ConvLSTM(mapss[L],mapss[L+1], clOpt.nSeq, 3, 3, clOpt.stride)
+         cR = nn.ConvLSTM(mapss[L+1],mapss[L+1], clOpt.nSeq, 3, 3, clOpt.stride)
          -- cR = nn.Sequencer(nn.ConvLSTM(mapss[L],mapss[L+1], clOpt.nSeq, 3, 3, clOpt.stride))
       end
 
