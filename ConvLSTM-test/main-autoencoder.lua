@@ -63,11 +63,7 @@ local function main()
   model:training()
 
   for t = 1,opt.maxIter do
-  --------------------------------------------------------------------
-    -- progress
-    iter = iter+1
 
-    --------------------------------------------------------------------
     -- define eval closure
     local feval = function()
       local f = 0
