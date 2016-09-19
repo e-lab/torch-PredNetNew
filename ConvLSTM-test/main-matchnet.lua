@@ -8,15 +8,15 @@ require 'cutorch'
 require 'image'
 require 'optim'
 require 'ConvLSTM'
-
+require 'env'
 --torch.setdefaulttensortype('torch.FloatTensor') -- does not work on float, maybe rnn package from Element Research?
 
 local function main()
   cutorch.setDevice(1)
   paths.dofile('opts-mnist.lua')
   paths.dofile('data-mnist.lua')
-  paths.dofile('model-autoencoder.lua')
-  print('This is the model:', model)
+  paths.dofile('model-matchnet.lua')
+  print('This is the model:', {model})
 
   -- test model:
   -- local a = model:forward(torch.CudaTensor(1,1,64,64))
@@ -38,12 +38,12 @@ local function main()
 
   -- init LSTM parameters to small values, uniformly distributed
   -- local lstm_params, lstm_grads = model.modules[2].modules[2].modules[1].module:getParameters()
-  local lstm_params, lstm_grads = model.modules[2].modules[1]:getParameters()
-  lstm_params:uniform(-0.08,0.08)
+  -- local lstm_params, lstm_grads = model.modules[2].modules[1]:getParameters()
+  -- lstm_params:uniform(-0.08,0.08)
   -- init LSTM biases to (forget_bias, other_bias)
-  model.modules[2].modules[1]:initBias(0,0)
+  -- model.modules[2].modules[1]:initBias(0,0)
   -- call LSTM forget to reset the memory
-  model.modules[2].modules[1]:forget()
+  -- model.modules[2].modules[1]:forget()
   -- useful to display optical flow
   -- local optical_flow = model.modules[2].modules[2].modules[3].modules[7].output  
 
