@@ -8,4 +8,4 @@ To run:
 
 2: Download moving MNIST examples from: https://www.dropbox.com/sh/fvsqod4uv7yp0dp/AAAHoHUjkXg4mW6OvV91TgaEa (small is a 100-sample test, otherwise use the larger ones)
 
-3: run: ```qlua main-mnist.lua```
+3: run: ```qlua main-autoencoder.lua```
