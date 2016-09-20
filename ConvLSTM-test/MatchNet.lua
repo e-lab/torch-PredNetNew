@@ -32,6 +32,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       pE = inputs[3*L-2] -- previous layer E
       if testing then pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}} end
       
+      -- A branch:
       if L > 1 then
          cA = nn.SpatialConvolution(mapss[L-1], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
          mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
@@ -40,9 +41,9 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
          A = pE
       end
 
+      -- R branch:
       cR = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- recurrent / convLSTM temp model
       if L == nlayers then
-         print(inputs[3*L-1], cR)
          R = inputs[3*L-1] - cR -- this E = inputs[3*L-1] in this layer!
       else
          up = nn.SpatialUpSamplingNearest(poolsize)
@@ -51,6 +52,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       end
       if testing then R:annotate{graphAttributes = {color = 'red', fontcolor = 'red'}} end
 
+      -- A-hat branch:
       cAh = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
       Ah = {R} - cAh - nn.ReLU()
       op = nn.PReLU(mapss[L])
@@ -60,6 +62,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       outputs[2*L-1] = E -- this layer E
       outputs[2*L] = R -- this layer R
       outputs[2*L+1] = Ah -- prediction output
+   
    end
 
    return nn.gModule(inputs, outputs)
