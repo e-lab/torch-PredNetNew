@@ -4,9 +4,7 @@
 
 require 'nn'
 require 'nngraph'
-require 'UntiedConvLSTM'
-
-nngraph.setDebug(true)
+-- require 'UntiedConvLSTM'
 
 function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
 
@@ -59,9 +57,9 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       E = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
       E:annotate{graphAttributes = {color = 'blue', fontcolor = 'blue'}}
       -- set outputs:
-      outputs[2*L-1] = E -- this layer E
-      outputs[2*L] = R -- this layer R
-      outputs[2*L+1] = Ah -- prediction output
+      outputs[3*L-2] = E -- this layer E
+      outputs[3*L-1] = R -- this layer R
+      outputs[3*L] = Ah -- prediction output
    
    end
 

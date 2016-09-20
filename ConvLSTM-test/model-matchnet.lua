@@ -1,19 +1,53 @@
 require 'nn'
-require 'rnn'
+-- require 'rnn'
 require 'MatchNet'
 
 local nlayers = 1
 local input_stride = 1
 local poolsize = 2
 local mapss = {3, 32, 64, 128, 256}
-local clOpt = {}
-clOpt['nSeq'] = 19
-clOpt['stride'] = 1
 
 -- instantiate MatchNet:
-model = nn.Sequencer( mNet(nlayers, input_stride, poolsize, mapss, clOpt) )
-model:remember('both')
-model:training()
+local unit = mNet(nlayers, input_stride, poolsize, mapss, {opt.nSeq, opt.stride}, false) -- false testing mode
+
+-- tests:
+-- local inTable = {}
+-- table.insert( inTable, torch.Tensor(mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- prev E
+-- table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- this E
+-- -- output is model[1].output[3]
+-- local outTable = unit:forward(inTable)
+-- print('Output is: ')
+-- print(outTable)
+-- print('output', unit.outnode.children[3])
+-- print('input', unit.innode)
+
+
+-- clone model through time-steps:
+dofile('utils.lua')
+local clones = clone_many_times(unit, opt.nSeq)
+
+
+-- create model by connecting clones outputs and setting up global input:
+-- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
+h0 = nn.Identity()()
+x = nn.Identity()()
+xs = nn.SplitTable(2)(x)
+h = h0
+for i = 1, opt.nSeq do
+  h = clones[i] ( { h, nn.SelectTable(i) (xs) } )
+end
+y =  nn.SelectTable(1)(h)
+model = nn.gModule( {h0,x}, {y} )
+print(model)
+
+local inTable = {}
+table.insert( inTable, torch.Tensor(mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- prev E
+table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- this E
+local outTable = unit:forward(inTable)
+print('Output is: ')
+print(outTable)
+
+
 
 -- loss module: penalize difference of gradients
 local gx = torch.Tensor(3,3):zero()

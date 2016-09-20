@@ -7,16 +7,17 @@ require 'torch'
 require 'cutorch'
 require 'image'
 require 'optim'
-require 'ConvLSTM'
+-- require 'ConvLSTM'
 require 'env'
---torch.setdefaulttensortype('torch.FloatTensor') -- does not work on float, maybe rnn package from Element Research?
+torch.setdefaulttensortype('torch.FloatTensor') 
+-- does not work on float, maybe rnn package from Element Research?
 
 local function main()
   cutorch.setDevice(1)
   paths.dofile('opts-mnist.lua')
   paths.dofile('data-mnist.lua')
   paths.dofile('model-matchnet.lua')
-  print('This is the model:', {model})
+  -- print('This is the model:', {model})
 
   -- test model:
   -- local a = model:forward(torch.CudaTensor(1,1,64,64))
@@ -63,11 +64,7 @@ local function main()
   model:training()
 
   for t = 1,opt.maxIter do
-  --------------------------------------------------------------------
-    -- progress
-    iter = iter+1
 
-    --------------------------------------------------------------------
     -- define eval closure
     local feval = function()
       local f = 0
@@ -84,6 +81,8 @@ local function main()
 
       target:resizeAs(data[1]):copy(data[data:size(1)])
       target = target:cuda()
+
+      -- print(inputTable)
       
       -- estimate f and gradients
       output = model:updateOutput(inputTable)
