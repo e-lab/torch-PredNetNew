@@ -73,8 +73,8 @@ function lstm(inDim, outDim, kw, kh, st, pa, layerNum, dropout)
    end
  -- set up the decoder
    local top_h = outputs[#outputs]
-   if dropout > 0 then top_hD = nn.Dropout(dropout)(top_h) end
-   table.insert(outputs,top_hD)
+   if dropout > 0 then top_h = nn.Dropout(dropout)(top_h) end
+   table.insert(outputs,top_h)
    return nn.gModule(inputs, outputs)
 end
 
