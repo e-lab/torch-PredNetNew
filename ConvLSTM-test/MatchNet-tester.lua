@@ -6,11 +6,10 @@ require 'nn'
 require 'nngraph'
 require 'MatchNet'
 
-local c = require 'trepl.colorize'
--- torch.setdefaulttensortype('torch.FloatTensor')
+torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
 
-
+-- model parameters:
 local insize = 64
 local nlayers = 1
 local input_stride = 1
@@ -21,11 +20,14 @@ clOpt['nSeq'] = 19
 clOpt['stride'] = 1
 
 -- instantiate MatchNet:
+print('Creating model')
 local model = mNet(nlayers, input_stride, poolsize, mapss, clOpt, true)
 nngraph.annotateNodes()
+-- print({model})
+-- print(model:parameters())
 
 -- test:
-print('Testing model:')
+print('Testing model')
 
 local inTable = {}
 for L = 1, nlayers do
@@ -35,5 +37,6 @@ for L = 1, nlayers do
 end
 
 local outTable = model:forward(inTable)
+print('Output is: ')
 print(outTable)
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
