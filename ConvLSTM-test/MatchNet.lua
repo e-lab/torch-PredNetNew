@@ -22,7 +22,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    local outputs = {}
    for L = 1, nlayers do
       inputs[3*L-2] = nn.Identity()() -- previous layer E / input
-      inputs[3*L-1] = nn.Identity()() -- this E
+      inputs[3*L-1] = nn.Identity()() -- prevous time E (from same layer)
       if L < nlayers then inputs[3*L] = nn.Identity()() end -- next R
    end
    
