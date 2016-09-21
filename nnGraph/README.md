@@ -2,16 +2,14 @@
 
 A model of https://coxlab.github.io/prednet/
 
-There are 3 cases 
+Run 'th predNet.lua' To run predNet model it works with 2 layers and nSeq
 
-mNetV2: Using convLSTM from nnGraph run with 2train.lua
+Models are in models folder
 
-mNet  : Using ConvLSTM from Elementary run with train.lua 
+m2Net : Is main model for predNet
 
-m2Net : Separate R and others run with m2train.lua 
+convLSTM : Convolution lstm for the predNet
 
-Since we need to update R state firest with previous t-1 sequence 
+In predNet.lua it do top down fist and update convLSTM and get output of lstm
 
-And update other modules with t sequence with R's out put.
-
-It's neccessary to separate RNN and Normal nnGraph model. 
+After top down get out put of lstm. Do down up with m2Net.

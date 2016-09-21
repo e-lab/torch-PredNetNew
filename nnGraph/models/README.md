@@ -1,13 +1,18 @@
-This is LASTM basic nngraph module from Karpaty 
+This is LASTM basic nngraph module from Karpaty
 
-To test the module 
+To test UnitedConvLSTM test
 
 ```
 th run.lua
 ```
 
-For convLSTM test 
+For convLSTM test
 
 ```
 th clrun.lua
+```
+For test convGRU test
+
+```
+th grRun.lua
 ```
