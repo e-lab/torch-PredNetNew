@@ -5,19 +5,20 @@ require 'MatchNet'
 local nlayers = 1
 local input_stride = 1
 local poolsize = 2
-local mapss = {3, 32, 64, 128, 256}
+local mapss = {1, 32, 64, 128, 256}
 
 -- instantiate MatchNet:
 local unit = mNet(nlayers, input_stride, poolsize, mapss, {opt.nSeq, opt.stride}, false) -- false testing mode
+nngraph.annotateNodes()
 
 -- tests:
--- local inTable = {}
--- table.insert( inTable, torch.Tensor(mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- prev E
--- table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- this E
--- -- output is model[1].output[3]
--- local outTable = unit:forward(inTable)
--- print('Output is: ')
--- print(outTable)
+local inTable = {}
+table.insert( inTable, torch.Tensor(mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- prev E
+table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- this E
+-- output is model[1].output[3]
+local outTable = unit:forward(inTable)
+print('Output test of one unit is: ')
+print(outTable)
 -- print('output', unit.outnode.children[3])
 -- print('input', unit.innode)
 
@@ -29,23 +30,28 @@ local clones = clone_many_times(unit, opt.nSeq)
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-h0 = nn.Identity()()
-x = nn.Identity()()
-xs = nn.SplitTable(2)(x)
-h = h0
-for i = 1, opt.nSeq do
-  h = clones[i] ( { h, nn.SelectTable(i) (xs) } )
+local E0 = nn.Identity()()
+local xi = nn.Identity()()
+-- xs = {xi} - nn.SplitTable(2)
+E = E0
+for i = 1, 1 do-- opt.nSeq do
+  E = {clones[i] ( { {xi} - nn.SelectTable(i), E } ) } - nn.SelectTable(1) -- connect output E to prev E of next clone
 end
-y =  nn.SelectTable(1)(h)
-model = nn.gModule( {h0,x}, {y} )
-print(model)
+local yo = {E} - nn.SelectTable(1) -- select Ah output of first layer as output of network
+model = nn.gModule( {E0,xi}, {yo} )
+nngraph.annotateNodes()
+graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+-- print(model)
 
 local inTable = {}
-table.insert( inTable, torch.Tensor(mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- prev E
-table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- this E
-local outTable = unit:forward(inTable)
+local inSeqTable = {}
+for i=1,1 do table.insert( inSeqTable,  torch.ones( mapss[1], opt.inputSizeW, opt.inputSizeW) ) end -- input sequence
+table.insert( inTable,  inSeqTable ) -- input sequence
+table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- h0 (this E coming in)
+local outTable = model:updateOutput(inTable)
 print('Output is: ')
 print(outTable)
+-- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 

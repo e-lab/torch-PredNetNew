@@ -1,19 +1,20 @@
 unpack = unpack or table.unpack
 
 require 'nn'
-require 'cunn'
+-- require 'cunn'
 require 'paths'
 require 'torch'
-require 'cutorch'
+-- require 'cutorch'
 require 'image'
 require 'optim'
 -- require 'ConvLSTM'
 require 'env'
+
 torch.setdefaulttensortype('torch.FloatTensor') 
 -- does not work on float, maybe rnn package from Element Research?
 
 local function main()
-  cutorch.setDevice(1)
+  -- cutorch.setDevice(1)
   paths.dofile('opts-mnist.lua')
   paths.dofile('data-mnist.lua')
   paths.dofile('model-matchnet.lua')
@@ -76,7 +77,7 @@ local function main()
       sample = datasetSeq[t]
       data = sample[1]
       for i = 1,data:size(1)-1 do
-        table.insert(inputTable, data[i]:cuda())
+        table.insert(inputTable, data[i])--:cuda())
       end
 
       target:resizeAs(data[1]):copy(data[data:size(1)])
