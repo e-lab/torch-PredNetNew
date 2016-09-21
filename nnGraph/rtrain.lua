@@ -26,10 +26,12 @@ end
 local insize = 64
 local input_stride = 1
 local poolsize = 2
+local inputImsize = 32
+local imSize   ={16,8}
 local channels = {1, 32, 64} -- layer maps sizes
-local lstmCh = {96, 128} --  Out put size of lstm -- last chnel has no R_l+1 concat
-local cellCh = {32, 64} --  Out put size of lstm -- This is same as output channels
-local nlayers = 2
+local cellCh = {channels[1], channels[3]} --  Out put size of lstm -- This is same as output channels
+local lstmCh = {channels[2]*2+cellCh[2], channels[3]*2} --  Out put size of lstm -- last chnel has no R_l+1 concat
+local nlayers = 1
 
 -- Option for lstm
 local clOpt = {}
@@ -40,7 +42,6 @@ clOpt['st'] = 1
 clOpt['pa'] = 1
 clOpt['dropOut'] = 0
 clOpt['lm'] = 1
-
 -- create graph
 print('Creating model:')
 local pn = {}
@@ -58,12 +59,12 @@ local x,h,c,ht = {},{},{},{}
 local initState = {}
 for i = nlayers , 1, -1 do
    if i == nlayers then
-      x[i] = torch.Tensor(lstmCh[i],32,32):zero():cuda()
+      x[i] = torch.Tensor(lstmCh[i],imSize[i],imSize[i]):zero():cuda()
    else
       -- Need to concat Err so leaving space
-      x[i] = torch.Tensor(cellCh[i+1],32,32):zero():cuda()
+      x[i] = torch.Tensor(cellCh[i+1],imSize[i],imSize[i]):zero():cuda()
    end
-   c[i] = torch.Tensor(cellCh[i],32,32):zero()
+   c[i] = torch.Tensor(cellCh[i],imSize[i],imSize[i]):zero()
    h[i] = c[i]:clone()
    ht[i] = {}
    --Here only lstm layer 1
@@ -78,6 +79,7 @@ print(initState)
 
 --Make model cuda
 local lstmState = {}
+local up = nn.SpatialUpSamplingNearest(poolsize):cuda()
 lstmState[1] = initState
 function updateLSTM(pn,lstmState)
    --Update LSTM topDown lstmOut[1] : cell lstmOut[2]: hidden
@@ -88,8 +90,10 @@ function updateLSTM(pn,lstmState)
          lstmOut[i] = pn.lstm[i]:forward(lstmState[1][i])
       else
          upR = lstmOut[i+1][2]
+         upR = up:forward(upR)
+         print(upR:size())
          --Conv channels is 1 step forward since it starts from 1
-         E[i] = torch.zeros(channels[i+1],32,32):cuda()
+         E[i] = torch.zeros(channels[i+1],imSize[i],imSize[i]):cuda()
          --Fill up input of LSTM channels
          lstmState[1][i][1] = torch.cat(upR,E[i],1)
       end
@@ -120,7 +124,7 @@ rnnI = updateR(nlayers, lstmState)
 print('rnnI')
 print(rnnI)
 --Creat in put for main
-table.insert(inTable, torch.ones(channels[1], 32, 32):cuda()) -- input Image
+table.insert(inTable, torch.ones(channels[1], inputImsize, inputImsize):cuda()) -- input Image
 for L = 1, nlayers do
    table.insert(inTable, rnnI[L]) -- prev E
 end
