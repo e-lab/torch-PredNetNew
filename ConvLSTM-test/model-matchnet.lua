@@ -26,10 +26,9 @@ print(outTable)
 
 
 -- clone model through time-steps:
-dofile('utils.lua')
 local clones = {}
 for i = 1, opt.nSeq do
-   unit:clone('weight','bias','gradWeight','gradBias')
+   clones[i] = unit:clone('weight','bias','gradWeight','gradBias')
 end
 
 -- create model by connecting clones outputs and setting up global input:
