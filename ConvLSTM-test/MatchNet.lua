@@ -25,7 +25,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    end
    
    for L = 1, nlayers do
-      if testing then print('MatchNet model: creating layer:', L) end
+      if testing then print('MatchNet model: creating layer:', L) end 
 
       pE = inputs[3*L-2] -- previous layer E
       if testing then pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}} end

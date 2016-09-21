@@ -10,6 +10,8 @@ local mapss = {1, 32, 64, 128, 256}
 -- instantiate MatchNet:
 local unit = mNet(nlayers, input_stride, poolsize, mapss, {opt.nSeq, opt.stride}, false) -- false testing mode
 nngraph.annotateNodes()
+-- nngraph.setDebug(true)
+
 
 -- tests:
 local inTable = {}
@@ -25,19 +27,24 @@ print(outTable)
 
 -- clone model through time-steps:
 dofile('utils.lua')
-local clones = clone_many_times(unit, opt.nSeq)
-
+local clones = {}
+for i = 1, opt.nSeq do
+   unit:clone('weight','bias','gradWeight','gradBias')
+end
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
 local E0 = nn.Identity()()
 local xi = nn.Identity()()
+local tUnit, yo
 -- xs = {xi} - nn.SplitTable(2)
 E = E0
-for i = 1, 1 do-- opt.nSeq do
-  E = {clones[i] ( { {xi} - nn.SelectTable(i), E } ) } - nn.SelectTable(1) -- connect output E to prev E of next clone
+opt.nSeq = 1
+for i = 1, opt.nSeq do
+   tUnit = clones[i] ({ {xi} - nn.SelectTable(i), E })
+   E = {tUnit} - nn.SelectTable(1) -- connect output E to prev E of next clone
 end
-local yo = {E} - nn.SelectTable(1) -- select Ah output of first layer as output of network
+yo = {tUnit} - nn.SelectTable(3) -- select Ah output of first layer as output of network
 model = nn.gModule( {E0,xi}, {yo} )
 nngraph.annotateNodes()
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
@@ -85,6 +92,6 @@ criterion = nn.MSECriterion()
 --criterion.sizeAverage = false
 
 -- send everything to GPU
-model:cuda()
-gradloss:cuda()
-criterion:cuda()
+-- model:cuda()
+-- gradloss:cuda()
+-- criterion:cuda()
