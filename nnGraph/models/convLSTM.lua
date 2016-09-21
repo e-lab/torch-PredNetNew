@@ -13,7 +13,7 @@ local sc = backend.SpatialConvolution
 local scNB = backend.SpatialConvolution:noBias()
 local sg = backend.Sigmoid
 
-function lstm(inDim, outDim, opt)
+function lstm(inDim, outDim, opt, up)
   local dropout = opt.dropOut or 0
   local kw, kh  = opt.kw, opt.kh
   local stw, sth = opt.st, opt.st
@@ -80,14 +80,18 @@ function lstm(inDim, outDim, opt)
     local nextH = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
 
     table.insert(outputs, nextC)
-    table.insert(outputs, nextH)
+   --Apply dropout
+   if dropout > 0 then nextH = nn.Dropout(dropout)(nextH):annotate{name='drop_final'} end
+   if up then
+      out = nextH - nn.SpatialUpSamplingNearest(up)
+    else
+       out = nextH
+    end
+    table.insert(outputs, out)
   end
 
   -- Get last output
   local lastH = outputs[#outputs]
-  --Apply dropout
-  if dropout > 0 then lastHD = nn.Dropout(dropout)(lastH):annotate{name='drop_final'} end
-  table.insert(outputs, lastHD)
 
   return nn.gModule(inputs, outputs)
 end
