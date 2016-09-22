@@ -82,8 +82,6 @@ local function main()
 
       target:resizeAs(data[1]):copy(data[data:size(1)])
       target = target--:cuda()
-
-      -- print(inputTable)
       
       -- estimate f and gradients
       local h0 = torch.zeros( 1, opt.inputSizeW, opt.inputSizeW) -- h0 is 0
