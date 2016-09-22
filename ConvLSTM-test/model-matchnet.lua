@@ -2,24 +2,16 @@ require 'nn'
 -- require 'rnn'
 require 'MatchNet'
 
+-- nngraph.setDebug(true)
+
 local nlayers = 1
 local input_stride = 1
 local poolsize = 2
 
 -- instantiate MatchNet:
 local unit = mNet(nlayers, input_stride, poolsize, opt.nFilters, {opt.nSeq, opt.stride}, false) -- false testing mode
-nngraph.annotateNodes()
-graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
--- nngraph.setDebug(true)
-
--- test unit::
-local inTable = {}
-table.insert( inTable, torch.Tensor(opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) -- previous layer E
-table.insert( inTable, torch.zeros( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) -- same layer E
-table.insert( inTable, torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSizeW) ) -- same layer R
--- output is model[1].output[3]
-local outTable = unit:forward(inTable)
-print('Test unit ouput is: ', outTable)
+-- nngraph.annotateNodes()
+-- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
 -- clone model through time-steps:
 local clones = {}
@@ -43,8 +35,8 @@ for i = 1, opt.nSeq-1 do
 end
 yo = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E, R }) } - nn.SelectTable(3) -- select Ah output of first layer as output of network
 model = nn.gModule( {E0, R0, xi}, {yo} )
-nngraph.annotateNodes()
-graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+-- nngraph.annotateNodes()
+-- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 -- test overall model

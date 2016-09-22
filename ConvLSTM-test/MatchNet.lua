@@ -45,14 +45,20 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       end
 
       -- R / recurrent branch:
+      up = nn.SpatialUpSamplingNearest(poolsize)
       if L == nlayers then
          cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same layer E
          RE = {inputs[4*L-2]} - cR -- same layer E
          R = {RE, inputs[4*L-1]} - nn.CAddTable(1) -- same layer E preocessed +  previous time R
-      else
+      elseif L == 1 then
          cRE = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same layer E (same dims)
          cRR = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- prev layer R (higher dims)
-         up = nn.SpatialUpSamplingNearest(poolsize)
+         RR = {inputs[4*L]} - up - cRR -- upsampling of next layer R + conv cRR
+         RE = {inputs[4*L-2]} - cRE -- same layer E + conv cRE 
+         R = {RR, RE, inputs[4*L-1]} - nn.CAddTable(1) -- add all R and previous time R
+      else
+         cRE = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- same layer E (same dims)
+         cRR = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- prev layer R (higher dims)
          RR = {inputs[4*L]} - up - cRR -- upsampling of next layer R + conv cRR
          RE = {inputs[4*L-2]} - cRE -- same layer E + conv cRE 
          R = {RR, RE, inputs[4*L-1]} - nn.CAddTable(1) -- add all R and previous time R
@@ -60,7 +66,11 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       if testing then R:annotate{graphAttributes = {color = 'red', fontcolor = 'black'}} end
 
       -- A-hat branch:
-      cAh = nn.SpatialConvolution(mapss[L+1], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
+      if L == 1 then
+         cAh = nn.SpatialConvolution(mapss[L+1], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
+      else
+         cAh = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
+      end
       Ah = {R} - cAh - nn.ReLU()
       op = nn.PReLU(mapss[L])
       E = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU

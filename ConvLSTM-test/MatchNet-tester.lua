@@ -11,11 +11,11 @@ torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
 
 -- model parameters:
-local insize = 64
 local nlayers = 1
+local insize = 64
 local input_stride = 1
 local poolsize = 2
-local mapss = {1, 32, 64, 128, 256}
+local mapss = {1, 32, 32, 32}
 local clOpt = {}
 clOpt['nSeq'] = 19
 clOpt['stride'] = 1
@@ -30,11 +30,17 @@ local model = mNet(nlayers, input_stride, poolsize, mapss, clOpt, true)
 print('Testing model')
 
 local inTable = {}
-for L = 1, nlayers do
-   table.insert( inTable, torch.ones( mapss[L], insize/2^(L-1), insize/2^(L-1)) ) -- same layer E
-   table.insert( inTable, torch.zeros( mapss[L], insize/2^(L-1), insize/2^(L-1)) ) -- previous time E
-   table.insert( inTable, torch.zeros( mapss[L+1], insize/2^(L-1), insize/2^(L-1)) ) -- previous time R
-   if L < nlayers then table.insert( inTable, torch.zeros(mapss[L+1], insize/2^(L), insize/2^(L)) ) end -- next R
+
+-- 1st layer:
+table.insert( inTable, torch.ones(1,64,64)) -- same layer E / input
+table.insert( inTable, torch.zeros(1,64,64)) -- previous time E
+table.insert( inTable, torch.zeros(32,64,64)) -- previous time R
+if nlayers == 2 then
+table.insert( inTable, torch.zeros(32,32,32))  -- next R
+-- 2nd layer
+table.insert( inTable, torch.ones(1,64,64)) -- same layer E / input
+table.insert( inTable, torch.zeros(32,32,32)) -- previous time E
+table.insert( inTable, torch.zeros(32,32,32))  -- previous time R
 end
 
 local outTable = model:forward(inTable)
