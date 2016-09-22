@@ -81,12 +81,13 @@ local function main()
       end
 
       target:resizeAs(data[1]):copy(data[data:size(1)])
-      target = target:cuda()
+      target = target--:cuda()
 
       -- print(inputTable)
       
       -- estimate f and gradients
-      output = model:updateOutput(inputTable)
+      local h0 = torch.zeros( 1, opt.inputSizeW, opt.inputSizeW) -- h0 is 0
+      output = model:updateOutput({h0, inputTable})
       gradtarget = gradloss:updateOutput(target):clone()
       gradoutput = gradloss:updateOutput(output)
 
@@ -114,7 +115,7 @@ local function main()
     _,fs = optim.rmsprop(feval, parameters, rmspropconf)
 
     err = err + fs[1]
-    model:forget()
+    -- model:forget()
     --------------------------------------------------------------------
     -- compute statistics / report error
     if math.fmod(t , opt.nSeq) == 1 then
@@ -139,26 +140,26 @@ local function main()
                               win = _im1_, nrow = 7, legend = 't-4, -3, -2, -2, t, Target, Output'}
       
         print (' ==== Displaying weights ==== ')
-        -- get weights
-        eweight = model.modules[1].modules[1].modules[1].modules[1].weight
-        dweight = model.modules[4].modules[2].weight
-        dweight_cpu = dweight:view(opt.nFilters[2], opt.kernelSize, opt.kernelSize)
-        eweight_cpu = eweight:view(opt.nFilters[2], opt.kernelSize, opt.kernelSize)
-        -- render filters
-        dd = image.toDisplayTensor{input=dweight_cpu,
-                                   padding=2,
-                                   nrow=math.floor(math.sqrt(opt.nFilters[2])),
-                                   symmetric=true}
-        de = image.toDisplayTensor{input=eweight_cpu,
-                                   padding=2,
-                                   nrow=math.floor(math.sqrt(opt.nFilters[2])),
-                                   symmetric=true}
+        -- -- get weights
+        -- eweight = model.modules[1].modules[1].modules[1].modules[1].weight
+        -- dweight = model.modules[4].modules[2].weight
+        -- dweight_cpu = dweight:view(opt.nFilters[2], opt.kernelSize, opt.kernelSize)
+        -- eweight_cpu = eweight:view(opt.nFilters[2], opt.kernelSize, opt.kernelSize)
+        -- -- render filters
+        -- dd = image.toDisplayTensor{input=dweight_cpu,
+        --                            padding=2,
+        --                            nrow=math.floor(math.sqrt(opt.nFilters[2])),
+        --                            symmetric=true}
+        -- de = image.toDisplayTensor{input=eweight_cpu,
+        --                            padding=2,
+        --                            nrow=math.floor(math.sqrt(opt.nFilters[2])),
+        --                            symmetric=true}
 
-        -- live display
-        if opt.display then
-           _win1_ = image.display{image=dd, win=_win1_, legend='Decoder filters', zoom=8}
-           _win2_ = image.display{image=de, win=_win2_, legend='Encoder filters', zoom=8}
-        end
+        -- -- live display
+        -- if opt.display then
+        --    _win1_ = image.display{image=dd, win=_win1_, legend='Decoder filters', zoom=8}
+        --    _win2_ = image.display{image=de, win=_win2_, legend='Encoder filters', zoom=8}
+        -- end
       end  
     end
   end
