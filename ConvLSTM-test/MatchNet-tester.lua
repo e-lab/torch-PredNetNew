@@ -33,7 +33,7 @@ local inTable = {}
 for L = 1, nlayers do
    table.insert( inTable, torch.ones( mapss[L], insize/2^(L-1), insize/2^(L-1)) ) -- same layer E
    table.insert( inTable, torch.zeros( mapss[L], insize/2^(L-1), insize/2^(L-1)) ) -- previous time E
-   table.insert( inTable, torch.zeros( mapss[L], insize/2^(L-1), insize/2^(L-1)) ) -- previous time R
+   table.insert( inTable, torch.zeros( mapss[L+1], insize/2^(L-1), insize/2^(L-1)) ) -- previous time R
    if L < nlayers then table.insert( inTable, torch.zeros(mapss[L+1], insize/2^(L), insize/2^(L)) ) end -- next R
 end
 

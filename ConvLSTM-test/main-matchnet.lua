@@ -84,8 +84,9 @@ local function main()
       target = target--:cuda()
       
       -- estimate f and gradients
-      local h0 = torch.zeros( 1, opt.inputSizeW, opt.inputSizeW) -- h0 is 0
-      output = model:updateOutput({h0, inputTable})
+      local E0 = torch.zeros( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) -- E0 is 0
+      local R0 = torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSizeW) -- R0 is 0
+      output = model:updateOutput({E0, R0, inputTable})
       gradtarget = gradloss:updateOutput(target):clone()
       gradoutput = gradloss:updateOutput(output)
 

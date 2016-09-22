@@ -5,21 +5,21 @@ require 'MatchNet'
 local nlayers = 1
 local input_stride = 1
 local poolsize = 2
-local mapss = {1, 32, 64, 128, 256}
 
 -- instantiate MatchNet:
-local unit = mNet(nlayers, input_stride, poolsize, mapss, {opt.nSeq, opt.stride}, false) -- false testing mode
+local unit = mNet(nlayers, input_stride, poolsize, opt.nFilters, {opt.nSeq, opt.stride}, false) -- false testing mode
 nngraph.annotateNodes()
 graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 -- nngraph.setDebug(true)
 
 -- test unit::
 local inTable = {}
-table.insert( inTable, torch.Tensor(mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- prev E
-table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- this E
+table.insert( inTable, torch.Tensor(opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) -- previous layer E
+table.insert( inTable, torch.zeros( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) -- same layer E
+table.insert( inTable, torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSizeW) ) -- same layer R
 -- output is model[1].output[3]
 local outTable = unit:forward(inTable)
-print('Output test of one unit is: ', outTable)
+print('Test unit ouput is: ', outTable)
 
 -- clone model through time-steps:
 local clones = {}
@@ -30,14 +30,19 @@ end
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
 local E0 = nn.Identity()()
+local R0 = nn.Identity()()
 local xi = nn.Identity()()
-local tUnit, yo
-E = E0
-for i = 1, opt.nSeq do
-   E = { clones[i]({ {xi} - nn.SelectTable(i), E }) } - nn.SelectTable(1) -- connect output E to prev E of next clone
+local tUnit, yo, xii
+local E = E0
+local R = R0
+for i = 1, opt.nSeq-1 do
+   xii = {xi} - nn.SelectTable(i)
+   tUnit = clones[i]({ xii, E, R })
+   E = { tUnit } - nn.SelectTable(1) -- connect output E to prev E of next clone
+   R = { tUnit } - nn.SelectTable(2) -- connect output R to same layer E of next clone
 end
-yo = {clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E })} - nn.SelectTable(3) -- select Ah output of first layer as output of network
-model = nn.gModule( {E0,xi}, {yo} )
+yo = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E, R }) } - nn.SelectTable(3) -- select Ah output of first layer as output of network
+model = nn.gModule( {E0, R0, xi}, {yo} )
 nngraph.annotateNodes()
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
@@ -45,11 +50,12 @@ graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 -- test overall model
 local inTable = {}
 local inSeqTable = {}
-for i = 1, opt.nSeq do table.insert( inSeqTable,  torch.ones( mapss[1], opt.inputSizeW, opt.inputSizeW) ) end -- input sequence
-table.insert( inTable, torch.zeros( mapss[1], opt.inputSizeW, opt.inputSizeW) ) -- h0 (this E coming in)
+for i = 1, opt.nSeq do table.insert( inSeqTable,  torch.ones( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) end -- input sequence
+table.insert( inTable, torch.zeros( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) -- same layer E
+table.insert( inTable, torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSizeW) ) -- same layer R
 table.insert( inTable,  inSeqTable ) -- input sequence
 local outTable = model:updateOutput(inTable)
-print('Output is: ', outTable:type(), 'of size:', outTable:size())
+print('Model output is: ', outTable:size())
 -- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
