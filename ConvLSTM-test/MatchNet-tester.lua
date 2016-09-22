@@ -23,7 +23,6 @@ clOpt['stride'] = 1
 -- instantiate MatchNet:
 print('Creating model')
 local model = mNet(nlayers, input_stride, poolsize, mapss, clOpt, true)
-nngraph.annotateNodes()
 -- print({model})
 -- print(model:parameters())
 

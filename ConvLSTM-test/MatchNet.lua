@@ -73,6 +73,8 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    
    end
 
-   return nn.gModule(inputs, outputs)
-
+   local g = nn.gModule(inputs, outputs)
+   if testing then nngraph.annotateNodes() end
+   return g
+   
 end
