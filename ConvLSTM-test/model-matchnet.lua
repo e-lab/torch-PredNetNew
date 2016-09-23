@@ -21,8 +21,8 @@ end
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-local E, R, E0, R0, tUnit, yo, xii, uInputs
-E={} R={} E0 ={} R0={} yo={}
+local E, R, E0, R0, tUnit, P, xii, uInputs
+E={} R={} E0 ={} R0={} P={}
 for L=1, nlayers do
    E0[L] = nn.Identity()()
    R0[L] = nn.Identity()()
@@ -31,6 +31,7 @@ for L=1, nlayers do
 end
 local xi = nn.Identity()()
 for i = 1, opt.nSeq do
+   -- set inputs to clones:
    uInputs={}
    xii = {xi} - nn.SelectTable(i) -- select i-th input from sequence
    table.insert(uInputs, xii)
@@ -38,18 +39,19 @@ for i = 1, opt.nSeq do
       table.insert(uInputs, E[L])
       table.insert(uInputs, R[L])
    end
-   tUnit = clones[i] ({ table.unpack(uInputs) })
+   -- clones inputs = {input_sequence, E_layer_1, R_layer_1, E_layer_2, R_layer_2, ...}
+   tUnit = clones[i] ({ table.unpack(uInputs) }) -- inputs applied to clones
+   -- connect clones:
    for L=1, nlayers do
-      -- clones input = {in, E, R, nR, E, R, nR ....} nR only if there is another layer after it
       if i < opt.nSeq then
          E[L] = { tUnit } - nn.SelectTable(3*L-2) -- connect output E to prev E of next clone
          R[L] = { tUnit } - nn.SelectTable(3*L-1) -- connect output R to same layer E of next clone
       else
-         yo[L] = { tUnit } - nn.SelectTable(3*L) -- select Ah output as output of network
+         P[L] = { tUnit } - nn.SelectTable(3*L) -- select Ah output as output of network
       end
    end
 end
-model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {yo[1]} ) -- only care about layer 1 Ah output here
+model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {P[1]} ) -- output is P_layer_1 (prediction / Ah)
 nngraph.annotateNodes()
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
