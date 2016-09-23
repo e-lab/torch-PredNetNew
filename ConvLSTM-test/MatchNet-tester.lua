@@ -33,12 +33,20 @@ local inTable = {}
 
 -- 1st layer:
 table.insert( inTable, torch.ones(1,64,64)) -- same layer E / input
-table.insert( inTable, torch.zeros(1,64,64)) -- previous time E
-table.insert( inTable, torch.zeros(32,64,64)) -- previous time R
-if nlayers == 2 then
+for L=1, nlayers do
+   table.insert( inTable, torch.zeros(mapss[L], insize/2^(L-1), insize/2^(L-1)))-- previous time E
+   if L==1 then 
+      table.insert( inTable, torch.zeros(mapss[L+1], insize/2^(L-1), insize/2^(L-1))) -- previous time R
+   else
+      table.insert( inTable, torch.zeros(mapss[L], insize/2^(L-1), insize/2^(L-1))) -- previous time R
+   end
+-- here are immediate values as a reminder:
+-- table.insert( inTable, torch.zeros(1,64,64)) -- previous time E
+-- table.insert( inTable, torch.zeros(32,64,64)) -- previous time R
+-- if nlayers == 2 then
 -- 2nd layer
-table.insert( inTable, torch.zeros(32,32,32)) -- previous time E
-table.insert( inTable, torch.zeros(32,32,32))  -- previous time R
+-- table.insert( inTable, torch.zeros(32,32,32)) -- previous time E
+-- table.insert( inTable, torch.zeros(32,32,32))  -- previous time R
 end
 
 local outTable = model:forward(inTable)
