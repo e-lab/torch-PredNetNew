@@ -34,10 +34,10 @@ for L=1, nlayers do
    for i = 1, opt.nSeq-1 do
       xii = {xi} - nn.SelectTable(i)
       tUnit = clones[i]({ xii, E, R })
-      E = { tUnit } - nn.SelectTable(1) -- connect output E to prev E of next clone
-      R = { tUnit } - nn.SelectTable(2) -- connect output R to same layer E of next clone
+      E = { tUnit } - nn.SelectTable(3*(L-1)+1) -- connect output E to prev E of next clone
+      R = { tUnit } - nn.SelectTable(3*(L-1)+2) -- connect output R to same layer E of next clone
    end
-   yo[L] = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E, R }) } - nn.SelectTable(3) -- select Ah output of first layer as output of network
+   yo[L] = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E, R }) } - nn.SelectTable(3*(L-1)+3) -- select Ah output of first layer as output of network
 end
 model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(yo)} )
 -- nngraph.annotateNodes()
