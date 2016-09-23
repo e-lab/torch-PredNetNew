@@ -21,7 +21,7 @@ end
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-local E, R, E0, R0, tUnit, yo
+local E, R, E0, R0, tUnit, yo, xii
 E0 ={} R0 = {} yo={}
 for L=1, nlayers do
    E0[L] = nn.Identity()()
