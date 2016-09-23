@@ -31,19 +31,57 @@ local xi = nn.Identity()()
 for L=1, nlayers do
    E[L] = E0[L]
    R[L] = R0[L]
-   for i = 1, opt.nSeq-1 do
+   for i = 1, opt.nSeq do
       xii = {xi} - nn.SelectTable(i)
       -- table.insert(uInputs, xii)
       -- clones input = {in, E, R, nR, E, R, nR ....} nR only if there is another layer after it
       tUnit = clones[i]({ xii, E[L], R[L] })
-      E[L] = { tUnit } - nn.SelectTable(3*(L-1)+1) -- connect output E to prev E of next clone
-      R[L] = { tUnit } - nn.SelectTable(3*(L-1)+2) -- connect output R to same layer E of next clone
+      if i < opt.nSeq then 
+         E[L] = { tUnit } - nn.SelectTable(3*L-2) -- connect output E to prev E of next clone
+         R[L] = { tUnit } - nn.SelectTable(3*L-1) -- connect output R to same layer E of next clone
+      else
+         yo[L] = { tUnit } - nn.SelectTable(3*L) -- select Ah output of first layer as output of network
+      end
    end
-   yo[L] = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E[L], R[L] }) } - nn.SelectTable(3*(L-1)+3) -- select Ah output of first layer as output of network
 end
 model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(yo)} ) -- only care about layer 1 output here
 nngraph.annotateNodes()
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+-- local E, R, E0, R0, tUnit, yo, xii, uInputs
+-- E={} R={} E0 ={} R0={} --yo={}
+-- for L=1, nlayers do
+--    E0[L] = nn.Identity()()
+--    R0[L] = nn.Identity()()
+-- end
+-- local xi = nn.Identity()()
+-- for i = 1, opt.nSeq do
+--    uInputs={}
+--    xii = {xi} - nn.SelectTable(i)
+--    table.insert(uInputs, xii)
+--    for L=1, nlayers do
+--       E[L] = E0[L]
+--       R[L] = R0[L]
+--       table.insert(uInputs, E[L])
+--       table.insert(uInputs, R[L])
+--    end
+--    tUnit = clones[i]({table.unpack(uInputs)})
+--    for L=1, nlayers do
+--       -- clones input = {in, E, R, nR, E, R, nR ....} nR only if there is another layer after it
+--       E[L] = { tUnit } - nn.SelectTable(3*L-2) -- connect output E to prev E of next clone
+--       R[L] = { tUnit } - nn.SelectTable(3*L-1) -- connect output R to same layer E of next clone
+--    end
+-- end
+-- uInputs={}
+-- xii = {xi} - nn.SelectTable(opt.nSeq)
+-- table.insert(uInputs, xii)
+-- for L=1, nlayers do
+--    table.insert(uInputs, E[L])
+--    table.insert(uInputs, R[L])
+-- end
+-- yo = { clones[opt.nSeq]({table.unpack(uInputs)}) } - nn.SelectTable() -- select Ah output of first layer as output of network
+-- model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(yo)} ) -- only care about layer 1 output here
+-- nngraph.annotateNodes()
+-- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 -- test overall model
@@ -55,7 +93,8 @@ table.insert( inTable, torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSi
 table.insert( inTable,  inSeqTable ) -- input sequence
 local outTable = model:updateOutput(inTable)
 print('Model output is: ', outTable:size())
--- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+
 
 
 -- loss module: penalize difference of gradients
