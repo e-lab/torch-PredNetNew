@@ -35,7 +35,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       if L < nlayers then inputs[4*L] = nn.Identity()() end -- next R
    end
 
-   -- layer 1:
+   -- 1 layer:
    if nlayers == 1 then
       L = 1
       A = inputs[4*L-3] -- previous layer E
@@ -52,7 +52,44 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       outputs[3*L] = Ah -- prediction output
    end
 
-   
+   -- 2 layers:
+   if nlayers == 2 then
+      -- layer 1
+      L = 1
+      pE = inputs[4*L-3] -- previous layer E
+      A = pE
+      cRE = nn.SpatialConvolution(mapss[1], mapss[2], 3, 3, input_stride, input_stride, 1, 1) -- same layer E (same dims)
+      cRR = nn.SpatialConvolution(mapss[2], mapss[2], 3, 3, input_stride, input_stride, 1, 1) -- prev layer R (higher dims)
+      up = nn.SpatialUpSamplingNearest(poolsize)
+      RR = {inputs[4*L]} - up - cRR -- upsampling of next layer R + conv cRR
+      RE = {inputs[4*L-2]} - cRE -- same layer E + conv cRE 
+      R = {RR, RE, inputs[4*L-1]} - nn.CAddTable(1) -- add all R and previous time R
+      cAh = nn.SpatialConvolution(mapss[2], mapss[1], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
+      Ah = {R} - cAh - nn.ReLU()
+      op = nn.PReLU(mapss[L])
+      E = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
+      -- output list:
+      outputs[3*L-2] = E -- this layer E
+      outputs[3*L-1] = R -- this layer R
+      outputs[3*L] = Ah -- prediction output
+      -- layer 2
+      L = 2
+      pE = inputs[4*L-3] -- previous layer E
+      cA = nn.SpatialConvolution(mapss[1], mapss[2], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
+      mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
+      A = pE - cA - mA - nn.ReLU()
+      cR = nn.SpatialConvolution(mapss[2], mapss[2], 3, 3, input_stride, input_stride, 1, 1) -- same layer E
+      RE = {inputs[4*L-2]} - cR -- same layer E
+      R = {RE, inputs[4*L-1]} - nn.CAddTable(1) -- same layer E precessed +  previous time R
+      cAh = nn.SpatialConvolution(mapss[2], mapss[2], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
+      Ah = {R} - cAh - nn.ReLU()
+      op = nn.PReLU(mapss[L])
+      E = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
+      -- output list:
+      outputs[3*L-2] = E -- this layer E
+      outputs[3*L-1] = R -- this layer R
+      outputs[3*L] = Ah -- prediction output
+   end   
    
    local g = nn.gModule(inputs, outputs)
    if testing then nngraph.annotateNodes() end
@@ -111,7 +148,7 @@ end
 --       if L == nlayers then
 --          cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same layer E
 --          RE = {inputs[4*L-2]} - cR -- same layer E
---          R = {RE, inputs[4*L-1]} - nn.CAddTable(1) -- same layer E preocessed +  previous time R
+--          R = {RE, inputs[4*L-1]} - nn.CAddTable(1) -- same layer E processed +  previous time R
 --       elseif L == 1 then
 --          cRE = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same layer E (same dims)
 --          cRR = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- prev layer R (higher dims)

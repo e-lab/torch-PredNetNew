@@ -11,7 +11,7 @@ torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
 
 -- model parameters:
-local nlayers = 1
+local nlayers = 2
 local insize = 64
 local input_stride = 1
 local poolsize = 2
