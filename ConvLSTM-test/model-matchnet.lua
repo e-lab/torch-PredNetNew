@@ -4,7 +4,7 @@ require 'MatchNet'
 
 nngraph.setDebug(true)
 
-local nlayers = 2
+local nlayers = 1
 local input_stride = 1
 local poolsize = 2
 
@@ -13,24 +13,28 @@ local unit = mNet(nlayers, input_stride, poolsize, opt.nFilters, {opt.nSeq, opt.
 nngraph.annotateNodes()
 graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
+
 -- clone model through time-steps:
 local clones = {}
 for i = 1, opt.nSeq do
    clones[i] = unit:clone('weight','bias','gradWeight','gradBias')
 end
 
+
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
 local E, R, E0, R0, tUnit, P, xii, uInputs
-E={} R={} E0 ={} R0={} P={}
+E={} R={} E0={} R0={} P={}
+-- initialize inputs:
+local xi = nn.Identity()()
 for L=1, nlayers do
    E0[L] = nn.Identity()()
    R0[L] = nn.Identity()()
    E[L] = E0[L]
    R[L] = R0[L]
 end
-local xi = nn.Identity()()
-for i = 1, opt.nSeq do
+-- create model as combination of units:
+for i=1, opt.nSeq do
    -- set inputs to clones:
    uInputs={}
    xii = {xi} - nn.SelectTable(i) -- select i-th input from sequence
@@ -51,9 +55,10 @@ for i = 1, opt.nSeq do
       end
    end
 end
-model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {P[1]} ) -- output is P_layer_1 (prediction / Ah)
+model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(P)} ) -- output is P_layer_1 (prediction / Ah)
 nngraph.annotateNodes()
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+
 
 
 -- test overall model
