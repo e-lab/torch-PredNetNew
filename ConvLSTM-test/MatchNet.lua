@@ -26,8 +26,8 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    -- initializing inputs:
    inputs[1] = nn.Identity()() -- global input
    for L = 1, nlayers do
-      inputs[1+2*L-1] = nn.Identity()() -- same_layer_E (from previous time)
-      inputs[1+2*L] = nn.Identity()() -- same_layer_R (from previous time)
+      inputs[2*L] = nn.Identity()() -- same_layer_E (from previous time)
+      inputs[2*L+1] = nn.Identity()() -- same_layer_R (from previous time)
    end
    
    -- generating network layers:
