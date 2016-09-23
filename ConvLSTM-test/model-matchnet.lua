@@ -21,20 +21,25 @@ end
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-local E0 = nn.Identity()()
-local R0 = nn.Identity()()
-local xi = nn.Identity()()
-local tUnit, yo, xii
-local E = E0
-local R = R0
-for i = 1, opt.nSeq-1 do
-   xii = {xi} - nn.SelectTable(i)
-   tUnit = clones[i]({ xii, E, R })
-   E = { tUnit } - nn.SelectTable(1) -- connect output E to prev E of next clone
-   R = { tUnit } - nn.SelectTable(2) -- connect output R to same layer E of next clone
+local E, R, E0, R0, tUnit, yo
+E0 ={} R0 = {} yo={}
+for L=1, nlayers do
+   E0[L] = nn.Identity()()
+   R0[L] = nn.Identity()()
 end
-yo = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E, R }) } - nn.SelectTable(3) -- select Ah output of first layer as output of network
-model = nn.gModule( {E0, R0, xi}, {yo} )
+local xi = nn.Identity()()
+for L=1, nlayers do
+   E = E0[L]
+   R = R0[L]
+   for i = 1, opt.nSeq-1 do
+      xii = {xi} - nn.SelectTable(i)
+      tUnit = clones[i]({ xii, E, R })
+      E = { tUnit } - nn.SelectTable(1) -- connect output E to prev E of next clone
+      R = { tUnit } - nn.SelectTable(2) -- connect output R to same layer E of next clone
+   end
+   yo[L] = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E, R }) } - nn.SelectTable(3) -- select Ah output of first layer as output of network
+end
+model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(yo)} )
 -- nngraph.annotateNodes()
 -- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
