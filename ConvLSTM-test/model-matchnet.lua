@@ -2,7 +2,7 @@ require 'nn'
 -- require 'rnn'
 require 'MatchNet'
 
--- nngraph.setDebug(true)
+nngraph.setDebug(true)
 
 local nlayers = 1
 local input_stride = 1
@@ -10,8 +10,8 @@ local poolsize = 2
 
 -- instantiate MatchNet:
 local unit = mNet(nlayers, input_stride, poolsize, opt.nFilters, {opt.nSeq, opt.stride}, false) -- false testing mode
--- nngraph.annotateNodes()
--- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
+nngraph.annotateNodes()
+graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
 -- clone model through time-steps:
 local clones = {}
@@ -21,27 +21,29 @@ end
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-local E, R, E0, R0, tUnit, yo, xii
-E0 ={} R0 = {} yo={}
+local E, R, E0, R0, tUnit, yo, xii, uInputs
+E={} R={} E0 ={} R0={} yo={}
 for L=1, nlayers do
    E0[L] = nn.Identity()()
    R0[L] = nn.Identity()()
 end
 local xi = nn.Identity()()
 for L=1, nlayers do
-   E = E0[L]
-   R = R0[L]
+   E[L] = E0[L]
+   R[L] = R0[L]
    for i = 1, opt.nSeq-1 do
       xii = {xi} - nn.SelectTable(i)
-      tUnit = clones[i]({ xii, E, R })
-      E = { tUnit } - nn.SelectTable(3*(L-1)+1) -- connect output E to prev E of next clone
-      R = { tUnit } - nn.SelectTable(3*(L-1)+2) -- connect output R to same layer E of next clone
+      -- table.insert(uInputs, xii)
+      -- clones input = {in, E, R, nR, E, R, nR ....} nR only if there is another layer after it
+      tUnit = clones[i]({ xii, E[L], R[L] })
+      E[L] = { tUnit } - nn.SelectTable(3*(L-1)+1) -- connect output E to prev E of next clone
+      R[L] = { tUnit } - nn.SelectTable(3*(L-1)+2) -- connect output R to same layer E of next clone
    end
-   yo[L] = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E, R }) } - nn.SelectTable(3*(L-1)+3) -- select Ah output of first layer as output of network
+   yo[L] = { clones[opt.nSeq]({ {xi} - nn.SelectTable(opt.nSeq), E[L], R[L] }) } - nn.SelectTable(3*(L-1)+3) -- select Ah output of first layer as output of network
 end
-model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(yo)} )
--- nngraph.annotateNodes()
--- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(yo)} ) -- only care about layer 1 output here
+nngraph.annotateNodes()
+graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 -- test overall model
