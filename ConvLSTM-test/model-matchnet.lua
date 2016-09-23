@@ -4,7 +4,7 @@ require 'MatchNet'
 
 nngraph.setDebug(true)
 
-local nlayers = 1
+local nlayers = 2
 local input_stride = 1
 local poolsize = 2
 
@@ -32,24 +32,24 @@ end
 local xi = nn.Identity()()
 for i = 1, opt.nSeq do
    uInputs={}
-   xii = {xi} - nn.SelectTable(i)
+   xii = {xi} - nn.SelectTable(i) -- select i-th input from sequence
    table.insert(uInputs, xii)
    for L=1, nlayers do
       table.insert(uInputs, E[L])
       table.insert(uInputs, R[L])
    end
-   tUnit = clones[i]({table.unpack(uInputs)})
+   tUnit = clones[i] ({ table.unpack(uInputs) })
    for L=1, nlayers do
       -- clones input = {in, E, R, nR, E, R, nR ....} nR only if there is another layer after it
       if i < opt.nSeq then
          E[L] = { tUnit } - nn.SelectTable(3*L-2) -- connect output E to prev E of next clone
          R[L] = { tUnit } - nn.SelectTable(3*L-1) -- connect output R to same layer E of next clone
       else
-         yo[L] = { tUnit } - nn.SelectTable(3*L) -- select Ah output of first layer as output of network
+         yo[L] = { tUnit } - nn.SelectTable(3*L) -- select Ah output as output of network
       end
    end
 end
-model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(yo)} ) -- only care about layer 1 output here
+model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {yo[1]} ) -- only care about layer 1 Ah output here
 nngraph.annotateNodes()
 graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
@@ -58,8 +58,10 @@ graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 local inTable = {}
 local inSeqTable = {}
 for i = 1, opt.nSeq do table.insert( inSeqTable,  torch.ones( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) end -- input sequence
-table.insert( inTable, torch.zeros( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) -- same layer E
-table.insert( inTable, torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSizeW) ) -- same layer R
+for L=1, nlayers do
+   table.insert( inTable, torch.zeros( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) -- same layer E
+   table.insert( inTable, torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSizeW) ) -- same layer R
+end
 table.insert( inTable,  inSeqTable ) -- input sequence
 local outTable = model:updateOutput(inTable)
 print('Model output is: ', outTable:size())
