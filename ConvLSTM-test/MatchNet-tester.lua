@@ -38,7 +38,7 @@ table.insert( inTable, torch.zeros(32,64,64)) -- previous time R
 if nlayers == 2 then
 table.insert( inTable, torch.zeros(32,32,32))  -- next R
 -- 2nd layer
-table.insert( inTable, torch.ones(1,64,64)) -- same layer E / input
+-- table.insert( inTable, torch.ones(1,64,64)) -- same layer E / input
 table.insert( inTable, torch.zeros(32,32,32)) -- previous time E
 table.insert( inTable, torch.zeros(32,32,32))  -- previous time R
 end
