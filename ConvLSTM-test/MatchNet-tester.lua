@@ -28,11 +28,8 @@ local model = mNet(nlayers, input_stride, poolsize, mapss, clOpt, true)
 
 -- test:
 print('Testing model')
-
 local inTable = {}
-
--- 1st layer:
-table.insert( inTable, torch.ones(1,64,64)) -- same layer E / input
+table.insert( inTable, torch.ones(mapss[1], insize, insize)) -- input
 for L=1, nlayers do
    table.insert( inTable, torch.zeros(mapss[L], insize/2^(L-1), insize/2^(L-1)))-- previous time E
    if L==1 then 
@@ -41,6 +38,7 @@ for L=1, nlayers do
       table.insert( inTable, torch.zeros(mapss[L], insize/2^(L-1), insize/2^(L-1))) -- previous time R
    end
 -- here are immediate values as a reminder:
+-- table.insert( inTable, torch.ones(1,64,64)) -- input
 -- table.insert( inTable, torch.zeros(1,64,64)) -- previous time E
 -- table.insert( inTable, torch.zeros(32,64,64)) -- previous time R
 -- if nlayers == 2 then
