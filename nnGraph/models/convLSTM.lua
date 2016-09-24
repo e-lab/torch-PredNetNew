@@ -3,12 +3,10 @@
 -- August 2016
 
 require 'nn'
-require 'cunn'
-require 'cudnn'
 require 'nngraph'
 
 -- Set up backend
-local backend = cudnn
+local backend = nn
 local sc = backend.SpatialConvolution
 local scNB = backend.SpatialConvolution:noBias()
 local sg = backend.Sigmoid
@@ -70,7 +68,7 @@ function lstm(inDim, outDim, opt, up)
     local inGate = sg()(ig)
     local fgGate = sg()(fg)
     local ouGate = sg()(og)
-    local inTanh = cudnn.Tanh()(it)
+    local inTanh = backend.Tanh()(it)
     -- perform the LSTM update
     local nextC           = nn.CAddTable()({
         nn.CMulTable()({fgGate, prevC}),

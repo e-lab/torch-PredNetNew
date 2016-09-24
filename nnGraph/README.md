@@ -2,6 +2,10 @@
 
 A model of https://coxlab.github.io/prednet/
 
+There are 2 version V2 is lstm integrated in one main nnGraph model
+
+the other one is convLSTM and main models are speparated.
+
 Run 'th predNet.lua' To run predNet model it works with 2 layers and nSeq
 
 Models are in models folder
