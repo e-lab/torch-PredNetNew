@@ -4,14 +4,14 @@ require 'MatchNet'
 
 nngraph.setDebug(true)
 
-local nlayers = 1
+local nlayers = 2
 local input_stride = 1
 local poolsize = 2
 
 -- instantiate MatchNet:
 local unit = mNet(nlayers, input_stride, poolsize, opt.nFilters, {opt.nSeq, opt.stride}, false) -- false testing mode
-nngraph.annotateNodes()
-graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
+-- nngraph.annotateNodes()
+-- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
 
 -- clone model through time-steps:
@@ -55,9 +55,17 @@ for i=1, opt.nSeq do
       end
    end
 end
-model = nn.gModule( {table.unpack(E0), table.unpack(R0), xi}, {table.unpack(P)} ) -- output is P_layer_1 (prediction / Ah)
-nngraph.annotateNodes()
-graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+local inputs = {}
+local outputs = {}
+for L=1, nlayers do
+   table.insert(inputs, E0[L])
+   table.insert(inputs, R0[L])
+   table.insert(outputs, P[L])
+end
+table.insert(inputs, xi)
+model = nn.gModule(inputs, outputs) -- output is P_layer_1 (prediction / Ah)
+-- nngraph.annotateNodes()
+-- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 
@@ -72,7 +80,7 @@ end
 table.insert( inTable,  inSeqTable ) -- input sequence
 local outTable = model:updateOutput(inTable)
 print('Model output is: ', outTable:size())
-graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
+-- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
 
 
