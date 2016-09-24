@@ -11,18 +11,19 @@ torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
 
 -- model parameters:
+local opt = {}
 local nlayers = 2
-local insize = 64
+local opt.inputSizeW = 64
 local input_stride = 1
 local poolsize = 2
-local mapss = {1, 32, 32, 32}
+local opt.nFilters = {1, 32, 32, 32}
 local clOpt = {}
 clOpt['nSeq'] = 19
 clOpt['stride'] = 1
 
 -- instantiate MatchNet:
 print('Creating model')
-local model = mNet(nlayers, input_stride, poolsize, mapss, clOpt, true)
+local model = mNet(nlayers, input_stride, poolsize, opt.nFilters, clOpt, true)
 -- print({model})
 -- print(model:parameters())
 
@@ -31,11 +32,11 @@ print('Testing model')
 local inTable = {}
 table.insert( inTable, torch.ones(mapss[1], insize, insize)) -- input
 for L=1, nlayers do
-   table.insert( inTable, torch.zeros(mapss[L], insize/2^(L-1), insize/2^(L-1)))-- previous time E
+   table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
    if L==1 then 
-      table.insert( inTable, torch.zeros(mapss[L+1], insize/2^(L-1), insize/2^(L-1))) -- previous time R
+      table.insert( inTable, torch.zeros(opt.nFilters[L+1], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
    else
-      table.insert( inTable, torch.zeros(mapss[L], insize/2^(L-1), insize/2^(L-1))) -- previous time R
+      table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
    end
 -- here are immediate values as a reminder:
 -- table.insert( inTable, torch.ones(1,64,64)) -- input

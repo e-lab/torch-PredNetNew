@@ -64,6 +64,8 @@ local function main()
   
   model:training()
 
+  
+  -- train:
   for t = 1,opt.maxIter do
 
     -- define eval closure
@@ -72,7 +74,18 @@ local function main()
  
       model:zeroGradParameters()
 
+      -- setup initial variables:
+      local inTableG0 = {} -- global inputs reset
+      for L=1, opt.nlayers do
+         table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
+         if L==1 then 
+            table.insert( inTableG0, torch.zeros(opt.nFilters[L+1], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
+         else
+            table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
+         end
+      end
       inputTable = {}
+      
       target  = torch.Tensor()--= torch.Tensor(opt.transf,opt.memorySizeH, opt.memorySizeW) 
       sample = datasetSeq[t]
       data = sample[1]
@@ -84,9 +97,8 @@ local function main()
       target = target--:cuda()
       
       -- estimate f and gradients
-      local E0 = torch.zeros( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) -- E0 is 0
-      local R0 = torch.zeros( opt.nFilters[2], opt.inputSizeW, opt.inputSizeW) -- R0 is 0
-      output = model:updateOutput({E0, R0, inputTable})
+      table.insert(inTableG0, inputTable)
+      output = model:updateOutput( inTableG0 )
       gradtarget = gradloss:updateOutput(target):clone()
       gradoutput = gradloss:updateOutput(output)
 
