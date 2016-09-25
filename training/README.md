@@ -13,5 +13,5 @@ To run:
 
 ## to run MatchNet:
 
-3: run: ```qlua main-matchnet.lua```
+3: run: ```qlua main-matchnet.lua --nlayers 2``` to train with 2 layers (1-3 layer have been tested ok)
 
