@@ -1,4 +1,8 @@
-unpack = unpack or table.unpack
+-- MatchNet training: predicting future frames in video
+-- Eugenio Culurciello, August - September 2016
+--
+-- code training and testing inspired by: https://github.com/viorik/ConvLSTM
+--
 
 require 'nn'
 -- require 'cunn'
