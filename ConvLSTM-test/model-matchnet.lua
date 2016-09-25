@@ -1,5 +1,4 @@
 require 'nn'
--- require 'rnn'
 require 'MatchNet'
 
 -- nngraph.setDebug(true)

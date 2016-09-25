@@ -2,8 +2,6 @@
 -- August 2016
 -- MatchNet: a model of PredNet from: https://arxiv.org/abs/1605.08104
 
--- require 'nn'
--- require 'nngraph'
 require 'MatchNet'
 local c = require 'trepl.colorize'
 

@@ -7,28 +7,57 @@ require 'torch'
 -- require 'cutorch'
 require 'image'
 require 'optim'
--- require 'ConvLSTM'
 require 'env'
+require 'pl'
+
+-- lapp = require 'pl.lapp'
+opt = lapp [[
+  Command line options:
+  --dir   (default outputs_mnist_line)  subdirectory to save experiments in
+  --seed  (default 1250)          initial random seed
+
+  Model parameters:
+  --nlayers       (default 2)     number of layers of MatchNet
+  --inputSizeW    (default 64)    width of each input patch or image
+  --inputSizeH    (default 64)    width of each input patch or image
+  --eta           (default 1e-4)  learning rate
+  --etaDecay      (default 1e-5)  learning rate decay
+  --momentum      (default 0.9)   gradient momentum
+  --maxIter       (default 30000) max number of updates
+  
+  --nSeq          (default 19)    input video sequence lenght
+  --nFilters      (default {1,32,32,32})  number of filters in the encoding/decoding layers
+  --kernelSize    (default 7)     size of kernels in encoder/decoder layers
+  --kernelSizeMemory (default 7)
+  --padding       (default torch.floor(opt.kernelSize/2))  pad input before convolutions
+  --gradClip      (default 50)
+  --stride        (default 1)     stride in convolutions
+  --poolsize      (default 2)     maxpooling size
+  --constrWeight  (default {0,1,0.001})
+
+  --dataFile      (default 'data-small-train.t7')
+  --dataFileTest  (default 'data-small-test.t7')
+  --modelFile     (default nil)
+  --configFile    (default nil)
+  --statInterval  (default 50)    interval for printing error
+  -v              (default false) verbose output
+  --display       (default true)  display stuff
+  --displayInterval (default 50)
+  -s,--save      (default true)   save models
+  --saveInterval (default 10000)
+]]
+opt.nFilters  = {1,32,32,32} -- number of filters in the encoding/decoding layers
+opt.constrWeight = {0,1,0.001}
 
 torch.setdefaulttensortype('torch.FloatTensor') 
--- does not work on float, maybe rnn package from Element Research?
+torch.manualSeed(opt.seed)
+
 
 local function main()
   -- cutorch.setDevice(1)
-  paths.dofile('opts-mnist.lua')
   paths.dofile('data-mnist.lua')
   paths.dofile('model-matchnet.lua')
   -- print('This is the model:', {model})
-
-  -- test model:
-  -- local a = model:forward(torch.CudaTensor(1,1,64,64))
-  -- print('Network test: output size:', a:size())
-  -- local inputTable = {}
-  -- for i = 1, 19 do
-    -- table.insert(inputTable, torch.CudaTensor(1,64,64))
-  -- end
-  -- local a = model:updateOutput(inputTable)
-  -- print('Network test: output size w table:', #a, a[1]:size())
 
   datasetSeq = getdataSeq_mnist(opt.dataFile) -- we sample nSeq consecutive frames
 
@@ -36,35 +65,19 @@ local function main()
 
   print('==> training model')
 
-  torch.manualSeed(opt.seed)
-
-  -- init LSTM parameters to small values, uniformly distributed
-  -- local lstm_params, lstm_grads = model.modules[2].modules[2].modules[1].module:getParameters()
-  -- local lstm_params, lstm_grads = model.modules[2].modules[1]:getParameters()
-  -- lstm_params:uniform(-0.08,0.08)
-  -- init LSTM biases to (forget_bias, other_bias)
-  -- model.modules[2].modules[1]:initBias(0,0)
-  -- call LSTM forget to reset the memory
-  -- model.modules[2].modules[1]:forget()
-  -- useful to display optical flow
-  -- local optical_flow = model.modules[2].modules[2].modules[3].modules[7].output  
-
   parameters, grads = model:getParameters()
   print('Number of parameters ' .. parameters:nElement())
   print('Number of grads ' .. grads:nElement())
 
   local eta0 = 1e-6
   local eta = opt.eta
-
   local err = 0
   local iter = 0
   local epoch = 0
-
   rmspropconf = {learningRate = eta}
   
   model:training()
 
-  
   -- train:
   for t = 1,opt.maxIter do
 
@@ -149,28 +162,6 @@ local function main()
                                       target:squeeze(),
                                       output:squeeze() },
                               win = _im1_, nrow = 7, legend = 't-4, -3, -2, -2, t, Target, Output'}
-      
-        print (' ==== Displaying weights ==== ')
-        -- -- get weights
-        -- eweight = model.modules[1].modules[1].modules[1].modules[1].weight
-        -- dweight = model.modules[4].modules[2].weight
-        -- dweight_cpu = dweight:view(opt.nFilters[2], opt.kernelSize, opt.kernelSize)
-        -- eweight_cpu = eweight:view(opt.nFilters[2], opt.kernelSize, opt.kernelSize)
-        -- -- render filters
-        -- dd = image.toDisplayTensor{input=dweight_cpu,
-        --                            padding=2,
-        --                            nrow=math.floor(math.sqrt(opt.nFilters[2])),
-        --                            symmetric=true}
-        -- de = image.toDisplayTensor{input=eweight_cpu,
-        --                            padding=2,
-        --                            nrow=math.floor(math.sqrt(opt.nFilters[2])),
-        --                            symmetric=true}
-
-        -- -- live display
-        -- if opt.display then
-        --    _win1_ = image.display{image=dd, win=_win1_, legend='Decoder filters', zoom=8}
-        --    _win2_ = image.display{image=de, win=_win2_, legend='Encoder filters', zoom=8}
-        -- end
       end  
     end
   end

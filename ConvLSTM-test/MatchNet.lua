@@ -4,7 +4,6 @@
 
 require 'nn'
 require 'nngraph'
--- require 'UntiedConvLSTM'
 local c = require 'trepl.colorize'
 
 
