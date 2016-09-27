@@ -7,6 +7,7 @@ local c = require 'trepl.colorize'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
+nngraph.annotateNodes()
 
 -- model parameters:
 local opt = {}

@@ -9,6 +9,7 @@ local c = require 'trepl.colorize'
 
 
 function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
+   if testing then nngraph.annotateNodes() end
 
    local pE, A, upR, R, RR, RE, Ah, E, cR, cRR, cRE, cA, mA, cAh, up, op
    E={} -- output from layers are saved to connect to next layer input
@@ -31,9 +32,8 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    end
    
    -- generating network layers:
-   for L = 1, nlayers do
 
-   end
+   -- first recurrent branch needs to be updated from top:
    for L = nlayers,1,-1 do
 
       -- R / recurrent branch:
@@ -55,8 +55,10 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
          RE = {inputs[1+2*L-1]} - cRE -- same_layer_E + conv cRE 
          R[L] = {RR, RE, inputs[1+2*L]} - nn.CAddTable(1) -- add all R and same_layer_R
       end
-      -- if testing then R:annotate{graphAttributes = {color = 'red', fontcolor = 'black'}} end
+      if testing then R[L]:annotate{graphAttributes = {color = 'red', fontcolor = 'black'}} end
    end
+
+   -- the we update bottom-up discriminator and generator network:
    for L = 1, nlayers do
       if testing then print('MatchNet model: creating layer:', L) end 
 
@@ -69,7 +71,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
          mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
          A = pE - cA - mA - nn.ReLU()
       end
-      -- if testing then A:annotate{graphAttributes = {color = 'green', fontcolor = 'black'}} end
+      if testing then A:annotate{graphAttributes = {color = 'green', fontcolor = 'black'}} end
 
       -- A-hat branch:
       if L == 1 then
@@ -81,13 +83,12 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       end
       op = nn.PReLU(mapss[L])
       E[L] = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
-      -- if testing then E:annotate{graphAttributes = {color = 'blue', fontcolor = 'black'}} end
+      if testing then E[L]:annotate{graphAttributes = {color = 'blue', fontcolor = 'black'}} end
 
       -- output list:
       outputs[3*L-2] = E[L] -- this layer E
       outputs[3*L-1] = R[L] -- this layer R
       outputs[3*L] = Ah -- prediction output
-   
    end
 
    local g = nn.gModule(inputs, outputs)
