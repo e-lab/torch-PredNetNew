@@ -77,10 +77,8 @@ local function main()
   print('Number of parameters ' .. w:nElement())
   print('Number of grads ' .. dE_dw:nElement())
 
-  local eta0 = 1e-6
   local eta = opt.learningRate
   local err = 0
-  local iter = 0
   local epoch = 0
  
   local optimState = {
@@ -166,7 +164,7 @@ local function main()
       end  
     end
   end
-  print ('Training done')
+  print ('Training completed!')
   collectgarbage()
 end
 main()
