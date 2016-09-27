@@ -4,6 +4,7 @@
 
 require 'nn'
 require 'nngraph'
+require 'ReLUX' -- rectified linear unit with saturation to 1
 local c = require 'trepl.colorize'
 
 
@@ -73,10 +74,11 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       -- A-hat branch:
       if L == 1 then
          cAh = nn.SpatialConvolution(mapss[L+1], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
+         Ah = {R[L]} - cAh - nn.ReLUX(1) -- saturate to 1
       else
          cAh = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
+         Ah = {R[L]} - cAh - nn.ReLU()
       end
-      Ah = {R[L]} - cAh - nn.ReLU()
       op = nn.PReLU(mapss[L])
       E[L] = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
       -- if testing then E:annotate{graphAttributes = {color = 'blue', fontcolor = 'black'}} end
