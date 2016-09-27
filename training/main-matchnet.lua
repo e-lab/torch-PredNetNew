@@ -33,7 +33,6 @@ opt = lapp [[
   
   --nSeq          (default 19)    input video sequence lenght
   --nFilters      (default {1,32,32,32})  number of filters in the encoding/decoding layers
-  --padding       (default torch.floor(opt.kernelSize/2))  pad input before convolutions
   --stride        (default 1)     stride in convolutions
   --poolsize      (default 2)     maxpooling size
 
@@ -46,6 +45,7 @@ opt = lapp [[
   -s,--save      (default true)   save models
   --saveInterval (default 10000)
 ]]
+
 opt.nFilters  = {1,32,32,32} -- number of filters in the encoding/decoding layers
 
 torch.setdefaulttensortype('torch.FloatTensor') 
