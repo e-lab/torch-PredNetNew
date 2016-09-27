@@ -20,13 +20,16 @@ opt = lapp [[
   --dir   (default outputs_mnist_line)  subdirectory to save experiments in
   --seed  (default 1250)          initial random seed
 
+  Training parameters:
+  -r,--learningRate       (default 1e-3)        learning rate
+  -d,--learningRateDecay  (default 1e-7)        learning rate decay (in # samples)
+  -w,--weightDecay        (default 5e-4)        L2 penalty on the weights
+  -m,--momentum           (default 0.9)         momentum
+
   Model parameters:
   --nlayers       (default 2)     number of layers of MatchNet
   --inputSizeW    (default 64)    width of each input patch or image
   --inputSizeH    (default 64)    width of each input patch or image
-  --eta           (default 1e-4)  learning rate
-  --etaDecay      (default 1e-5)  learning rate decay
-  --momentum      (default 0.9)   gradient momentum
   --maxIter       (default 30000) max number of updates
   
   --nSeq          (default 19)    input video sequence lenght
@@ -58,6 +61,8 @@ torch.manualSeed(opt.seed)
 
 
 local function main()
+  local w, dE_dw
+
   -- cutorch.setDevice(1)
   paths.dofile('data-mnist.lua')
   paths.dofile('model-matchnet.lua')
@@ -69,16 +74,21 @@ local function main()
 
   print('==> training model')
 
-  parameters, grads = model:getParameters()
-  print('Number of parameters ' .. parameters:nElement())
-  print('Number of grads ' .. grads:nElement())
+  w, dE_dw = model:getParameters()
+  print('Number of parameters ' .. w:nElement())
+  print('Number of grads ' .. dE_dw:nElement())
 
   local eta0 = 1e-6
-  local eta = opt.eta
+  local eta = opt.learningRate
   local err = 0
   local iter = 0
   local epoch = 0
-  rmspropconf = {learningRate = eta}
+ 
+  local optimState = {
+    learningRate = opt.eta,
+    momentum = opt.momentum,
+    learningRateDecay = opt.learningRateDecay
+  }
   
   model:training()
 
@@ -86,7 +96,7 @@ local function main()
   for t = 1,opt.maxIter do
 
     -- define eval closure
-    local feval = function()
+    local eval_E = function(w)
       local f = 0
  
       model:zeroGradParameters()
@@ -115,46 +125,37 @@ local function main()
       
       -- estimate f and gradients
       table.insert(inTableG0, inputTable)
-      output = model:updateOutput( inTableG0 )
-      gradtarget = gradloss:updateOutput(target):clone()
-      gradoutput = gradloss:updateOutput(output)
+      output = model:forward(inTableG0)
+      f = f + criterion:forward(output, target)
+      local dE_dy = criterion:backward(output, target)
+      model:backward(inTableG0,dE_dy)
+      dE_dw:add(opt.weightDecay, w)
 
-      f = f + criterion:updateOutput(gradoutput,gradtarget)
-
-      -- gradients
-      local gradErrOutput = criterion:updateGradInput(gradoutput,gradtarget)
-      local gradErrGrad = gradloss:updateGradInput(output,gradErrOutput)
-           
-      model:updateGradInput(inputTable,gradErrGrad)
-
-      model:accGradParameters(inputTable, gradErrGrad)  
-
-      grads:clamp(-opt.gradClip,opt.gradClip)
-      return f, grads
+      -- return f and df/dX
+      return f, dE_dw
     end
-   
    
     if math.fmod(t,20000) == 0 then
       epoch = epoch + 1
-      eta = opt.eta*math.pow(0.5,epoch/50)  
-      rmspropconf.learningRate = eta  
+      eta = opt.learningRate*math.pow(0.5,epoch/50)  
+      optimState.learningRate = eta  
     end
     
-    _,fs = optim.rmsprop(feval, parameters, rmspropconf)
+    _,fs = optim.adam(eval_E, w, optimState)
 
     err = err + fs[1]
     -- model:forget()
     --------------------------------------------------------------------
     -- compute statistics / report error
     if math.fmod(t , opt.nSeq) == 1 then
-      print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..eta ) -- err/opt.statInterval)
+      print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..eta )
       err = 0
-      if opt.save and math.fmod(t , opt.nSeq*1000) == 1 and t>1 then
+      if opt.save and math.fmod(t, opt.nSeq*1000) == 1 and t>1 then
         -- clean model before saving to save space
         --  model:forget()
         -- cleanupModel(model)         
-        torch.save(opt.dir .. '/model_' .. t .. '.bin', model)
-        torch.save(opt.dir .. '/rmspropconf_' .. t .. '.bin', rmspropconf)
+        torch.save(opt.dir .. '/model_' .. t .. '.net', model)
+        torch.save(opt.dir .. '/optimState_' .. t .. '.t7', optimState)
       end
       
       if opt.display then
