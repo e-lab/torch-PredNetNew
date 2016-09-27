@@ -34,18 +34,12 @@ opt = lapp [[
   
   --nSeq          (default 19)    input video sequence lenght
   --nFilters      (default {1,32,32,32})  number of filters in the encoding/decoding layers
-  --kernelSize    (default 7)     size of kernels in encoder/decoder layers
-  --kernelSizeMemory (default 7)
   --padding       (default torch.floor(opt.kernelSize/2))  pad input before convolutions
-  --gradClip      (default 50)
   --stride        (default 1)     stride in convolutions
   --poolsize      (default 2)     maxpooling size
-  --constrWeight  (default {0,1,0.001})
 
   --dataFile      (default 'data-small-train.t7')
   --dataFileTest  (default 'data-small-test.t7')
-  --modelFile     (default nil)
-  --configFile    (default nil)
   --statInterval  (default 50)    interval for printing error
   -v              (default false) verbose output
   --display       (default true)  display stuff
@@ -54,7 +48,6 @@ opt = lapp [[
   --saveInterval (default 10000)
 ]]
 opt.nFilters  = {1,32,32,32} -- number of filters in the encoding/decoding layers
-opt.constrWeight = {0,1,0.001}
 
 torch.setdefaulttensortype('torch.FloatTensor') 
 torch.manualSeed(opt.seed)
