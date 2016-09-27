@@ -10,26 +10,26 @@ nngraph.setDebug(true)
 
 -- model parameters:
 local opt = {}
-local nlayers = 2
-local opt.inputSizeW = 64
-local input_stride = 1
-local poolsize = 2
-local opt.nFilters = {1, 32, 32, 32}
+opt.nlayers = 2
+opt.inputSizeW = 64
+opt.stride = 1
+opt.poolsize = 2
+opt.nFilters = {1, 32, 32, 32}
 local clOpt = {}
 clOpt['nSeq'] = 19
 clOpt['stride'] = 1
 
 -- instantiate MatchNet:
 print('Creating model')
-local model = mNet(nlayers, input_stride, poolsize, opt.nFilters, clOpt, true)
+local model = mNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, true)
 -- print({model})
 -- print(model:parameters())
 
 -- test:
 print('Testing model')
 local inTable = {}
-table.insert( inTable, torch.ones(mapss[1], insize, insize)) -- input
-for L=1, nlayers do
+table.insert( inTable, torch.ones(opt.nFilters[1], opt.inputSizeW, opt.inputSizeW)) -- input
+for L=1, opt.nlayers do
    table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
    if L==1 then 
       table.insert( inTable, torch.zeros(opt.nFilters[L+1], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
