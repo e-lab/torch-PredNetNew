@@ -1,0 +1,11 @@
+#Files
+*.t7
+*.sw*
+*.so
+*.o
+*.mp4
+*.mov
+*.txt
+*.net
+.DS_Store
+*.*~
