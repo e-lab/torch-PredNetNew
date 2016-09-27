@@ -5,10 +5,8 @@
 --
 
 require 'nn'
--- require 'cunn'
 require 'paths'
 require 'torch'
--- require 'cutorch'
 require 'image'
 require 'optim'
 require 'env'
@@ -17,8 +15,9 @@ require 'pl'
 -- lapp = require 'pl.lapp'
 opt = lapp [[
   Command line options:
-  --dir   (default outputs_mnist_line)  subdirectory to save experiments in
-  --seed  (default 1250)          initial random seed
+  --dir    (default results)  subdirectory to save experiments in
+  --seed   (default 1250)     initial random seed
+  --useGPU (default false)    use GPU in training
 
   Training parameters:
   -r,--learningRate       (default 1e-3)        learning rate
@@ -52,6 +51,13 @@ opt.nFilters  = {1,32,32,32} -- number of filters in the encoding/decoding layer
 torch.setdefaulttensortype('torch.FloatTensor') 
 torch.manualSeed(opt.seed)
 
+opt.useGPU = false
+print('Using GPU?', opt.useGPU)
+
+if opt.useGPU then
+  require 'cunn'
+  require 'cutorch'
+end
 
 local function main()
   local w, dE_dw
@@ -106,15 +112,15 @@ local function main()
       end
       inputTable = {}
       
-      target  = torch.Tensor()--= torch.Tensor(opt.transf,opt.memorySizeH, opt.memorySizeW) 
+      target  = torch.Tensor()
       sample = datasetSeq[t]
       data = sample[1]
       for i = 1,data:size(1)-1 do
-        table.insert(inputTable, data[i])--:cuda())
+        table.insert(inputTable, data[i])
       end
 
       target:resizeAs(data[1]):copy(data[data:size(1)])
-      target = target--:cuda()
+      if opt.useGPU then target = target:cuda() end
       
       -- estimate f and gradients
       table.insert(inTableG0, inputTable)
@@ -137,16 +143,13 @@ local function main()
     _,fs = optim.adam(eval_E, w, optimState)
 
     err = err + fs[1]
-    -- model:forget()
+
     --------------------------------------------------------------------
     -- compute statistics / report error
     if math.fmod(t , opt.nSeq) == 1 then
       print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..eta )
       err = 0
-      if opt.save and math.fmod(t, opt.nSeq*1000) == 1 and t>1 then
-        -- clean model before saving to save space
-        --  model:forget()
-        -- cleanupModel(model)         
+      if opt.save and math.fmod(t, opt.nSeq*1000) == 1 and t>1 then       
         torch.save(opt.dir .. '/model_' .. t .. '.net', model)
         torch.save(opt.dir .. '/optimState_' .. t .. '.t7', optimState)
       end
