@@ -1,6 +1,12 @@
-function getdataSeq_mnist(datafile)
-   local data = torch.load(datafile) -- uncomment this line if dataset in binary format
-   -- local data = torch.DiskFile(datafile,'r'):readObject() -- uncomment this line if dataset in ascii format
+function getdataSeq_mnist(datafile, big)
+   
+   local data 
+   if big then 
+      data = torch.DiskFile(datafile,'r'):readObject() -- uncomment this line if dataset in ascii format
+   else
+      data = torch.load(datafile) -- uncomment this line if dataset in binary format
+   end
+   
    local datasetSeq ={}
    data = data:float()/255.0
    local nsamples = data:size(1)

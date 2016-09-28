@@ -3,6 +3,7 @@
 --
 -- code training and testing inspired by: https://github.com/viorik/ConvLSTM
 --
+-------------------------------------------------------------------------------
 
 require 'nn'
 require 'paths'
@@ -12,12 +13,12 @@ require 'optim'
 require 'env'
 require 'pl'
 
--- lapp = require 'pl.lapp'
+lapp = require 'pl.lapp'
 opt = lapp [[
   Command line options:
   --dir    (default results)  subdirectory to save experiments in
   --seed   (default 1250)     initial random seed
-  --useGPU (default false)    use GPU in training
+  --useGPU                    use GPU in training
 
   Training parameters:
   -r,--learningRate       (default 1e-3)        learning rate
@@ -36,13 +37,12 @@ opt = lapp [[
   --stride        (default 1)     stride in convolutions
   --poolsize      (default 2)     maxpooling size
 
-  --dataFile      (default 'data-small-train.t7')
-  --dataFileTest  (default 'data-small-test.t7')
+  --dataBig                       use large dataset or reduced one
   --statInterval  (default 50)    interval for printing error
-  -v              (default false) verbose output
-  --display       (default true)  display stuff
+  -v                              verbose output
+  --display                       display stuff
   --displayInterval (default 50)
-  -s,--save      (default true)   save models
+  -s,--save                       save models
   --saveInterval (default 10000)
 ]]
 
@@ -69,12 +69,21 @@ local function main()
     criterion:cuda()
   end
 
-  datasetSeq = getdataSeq_mnist(opt.dataFile) -- we sample nSeq consecutive frames
+  print('Using large dataset?', opt.dataBig)
+  local dataFile, datasetSeq
+  if opt.dataBig then
+    dataFile  = 'dataset_fly_64x64_lines_train.t7'
+    dataFileTest = 'dataset_fly_64x64_lines_test.t7'
+  else
+    dataFile  = 'data-small-train.t7'
+    dataFileTest = 'data-small-test.t7'
+  end
 
+  print('Loading training data...')
+  datasetSeq = getdataSeq_mnist(dataFile, opt.dataBig) -- we sample nSeq consecutive frames
   print  ('Loaded ' .. datasetSeq:size() .. ' images')
 
   print('==> training model')
-
   w, dE_dw = model:getParameters()
   print('Number of parameters ' .. w:nElement())
   print('Number of grads ' .. dE_dw:nElement())
