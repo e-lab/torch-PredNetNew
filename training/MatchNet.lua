@@ -9,8 +9,6 @@ local c = require 'trepl.colorize'
 
 
 function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
-   if testing then nngraph.annotateNodes() end
-
    local pE, A, upR, R, RR, RE, Ah, E, cR, cRR, cRE, cA, mA, cAh, up, op
    E={} -- output from layers are saved to connect to next layer input
    R={} -- next layer R also connect directly to this layer R
@@ -39,17 +37,17 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       -- R / recurrent branch:
       up = nn.SpatialUpSamplingNearest(poolsize)
       if L == nlayers then
-         cR = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E
+         cR = nn.SpatialConvolution(2*mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E
          RE = {inputs[1+2*L-1]} - cR -- same layer E
          R[L] = {RE, inputs[1+2*L]} - nn.CAddTable(1) -- same_layer_E processed +  same_layer_R (from previous time)
       elseif L == 1 then
-         cRE = nn.SpatialConvolution(mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E (same dims)
+         cRE = nn.SpatialConvolution(2*mapss[L], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E (same dims)
          cRR = nn.SpatialConvolution(mapss[L+1], mapss[L+1], 3, 3, input_stride, input_stride, 1, 1) -- next_layer_R (higher dims)
          RR = {R[L+1]} - up - cRR -- upsampling of next layer R + conv cRR
          RE = {inputs[1+2*L-1]} - cRE -- same layer E + conv cRE 
          R[L] = {RR, RE, inputs[1+2*L]} - nn.CAddTable(1) -- add all R and previous time R
       else
-         cRE = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E (same dims)
+         cRE = nn.SpatialConvolution(2*mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E (same dims)
          cRR = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- next_layer_R (higher dims)
          RR = {R[L+1]} - up - cRR -- upsampling of next_layer_R + conv cRR
          RE = {inputs[1+2*L-1]} - cRE -- same_layer_E + conv cRE 
@@ -67,7 +65,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
          A = inputs[1] -- global input
       else
          pE = E[L-1] -- previous layer E
-         cA = nn.SpatialConvolution(mapss[L-1], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
+         cA = nn.SpatialConvolution(2*mapss[L-1], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
          mA = nn.SpatialMaxPooling(poolsize, poolsize, poolsize, poolsize)
          A = pE - cA - mA - nn.ReLU()
       end
@@ -82,7 +80,9 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
          Ah = {R[L]} - cAh - nn.ReLU()
       end
       op = nn.PReLU(mapss[L])
-      E[L] = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
+
+      -- E[L] = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
+      E[L] = { {A, Ah} - nn.CSubTable(1) - nn.ReLU(), {Ah, A} - nn.CSubTable(1) - nn.ReLU() } - nn.JoinTable(1) -- same and PredNet model
       if testing then E[L]:annotate{graphAttributes = {color = 'blue', fontcolor = 'black'}} end
 
       -- output list:

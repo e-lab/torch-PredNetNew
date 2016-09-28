@@ -101,7 +101,7 @@ local function main()
       -- setup initial variables:
       local inTableG0 = {} -- global inputs reset
       for L=1, opt.nlayers do
-         table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
+         table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
          if L==1 then 
             table.insert( inTableG0, torch.zeros(opt.nFilters[L+1], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
          else

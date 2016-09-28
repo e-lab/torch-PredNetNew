@@ -7,7 +7,6 @@ local c = require 'trepl.colorize'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
-nngraph.annotateNodes()
 
 -- model parameters:
 local opt = {}
@@ -31,7 +30,7 @@ print('Testing model')
 local inTable = {}
 table.insert( inTable, torch.ones(opt.nFilters[1], opt.inputSizeW, opt.inputSizeW)) -- input
 for L=1, opt.nlayers do
-   table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
+   table.insert( inTable, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
    if L==1 then 
       table.insert( inTable, torch.zeros(opt.nFilters[L+1], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
    else
