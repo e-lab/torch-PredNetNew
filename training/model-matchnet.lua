@@ -93,9 +93,6 @@ print('Model output is: ', outTable:size())
 
 
 criterion = nn.MSECriterion()
+-- criterion = nn.AbsCriterion()
+-- criterion.sizeAverage = false
 
--- send everything to GPU
-if opt.useGPU then
-   model:cuda()
-   criterion:cuda()
-end

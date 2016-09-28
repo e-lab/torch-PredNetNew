@@ -48,16 +48,10 @@ opt = lapp [[
 
 opt.nFilters  = {1,32,64,128} -- number of filters in the encoding/decoding layers
 
-torch.setdefaulttensortype('torch.FloatTensor') 
+torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(opt.seed)
 
-opt.useGPU = false
 print('Using GPU?', opt.useGPU)
-
-if opt.useGPU then
-  require 'cunn'
-  require 'cutorch'
-end
 
 local function main()
   local w, dE_dw
@@ -66,6 +60,14 @@ local function main()
   paths.dofile('data-mnist.lua')
   paths.dofile('model-matchnet.lua')
   -- print('This is the model:', {model})
+
+  -- send everything to GPU
+  if opt.useGPU then
+    require 'cunn'
+    require 'cutorch'
+    model:cuda()
+    criterion:cuda()
+  end
 
   datasetSeq = getdataSeq_mnist(opt.dataFile) -- we sample nSeq consecutive frames
 
@@ -101,13 +103,26 @@ local function main()
       -- reset initial network state:
       local inTableG0 = {}
       for L=1, opt.nlayers do
-         table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E (2x because E is 2xL)
-         if L==1 then 
-            table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
-         else
-            table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
-         end
+        if opt.useGPU then 
+          table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() )-- previous time E (2x because E is 2xL)
+        else
+          table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)) )
+        end
+        if L==1 then 
+          if opt.useGPU then 
+            table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- previous time R
+          else
+            table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))
+          end
+        else
+          if opt.useGPU then
+            table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- previous time R
+          else
+            table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)) )
+          end
+        end
       end
+
 
       -- get input video sequence data:
       seqTable = {} -- stores the input video sequence
@@ -115,7 +130,11 @@ local function main()
       sample = datasetSeq[t]
       data = sample[1]
       for i = 1, data:size(1)-1 do
-        table.insert(seqTable, data[i])
+        if opt.useGPU then 
+          table.insert(seqTable, data[i]:cuda())
+        else
+          table.insert(seqTable, data[i]) -- use CPU
+        end 
       end
       target:resizeAs(data[1]):copy(data[data:size(1)])
       if opt.useGPU then target = target:cuda() end
