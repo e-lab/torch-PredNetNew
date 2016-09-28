@@ -5,13 +5,31 @@
 
 require 'nn'
 require 'nngraph'
-require 'models.m2NetV2'
-require 'models.convLSTM'
 require 'image'
+require 'model-m2NetV2'
 local m = require 'opts'
-
 -- option is always gloable
 opt = m.parse(arg)
+nSeq = 3
+nlayers = opt.nlayers
+-- Option for lstm
+local clOpt = {}
+clOpt['nSeq'] = nSeq
+clOpt['kw'] = 3
+clOpt['kh'] = 3
+clOpt['st'] = 1
+clOpt['pa'] = 1
+clOpt['dropOut'] = 0
+clOpt['lm'] = 1
+
+--A anc Ah size
+local imSize   ={64,32}
+local channels = {1, 32} -- layer maps sizes
+local prevE  = {channels[1]*2,channels[2]*2}
+local cellCh = {32,prevE[1]} --  Out put size of lstm -- This is same as output channels
+local lstmCh = {cellCh[2]+prevE[1],prevE[2]} --  Out put size of lstm -- last chnel has no R_l+1 concat
+clOpt['cellCh'] = cellCh
+clOpt['lstmCh'] = lstmCh
 torch.setdefaulttensortype('torch.FloatTensor')
 nngraph.setDebug(true)
 
@@ -43,39 +61,9 @@ local function main()
                                    target:squeeze() },
                            win = _im1_, nrow = 7, legend = 't-4, -3, -2, -2, t, Target, Output'}
    end
+   main = createModel(opt, channels, clOpt)
    print(inputTable[1]:size())
    -- one layer, not time dependency:
-   -- Option for main
-   local input_stride = 1
-   local poolsize = 2
-   local inputImsize = 64
-   local nlayers = opt.nlayers
-   local nSeq    = 1
-   -- Option for lstm
-   local clOpt = {}
-   clOpt['nSeq'] = nSeq
-   clOpt['kw'] = 3
-   clOpt['kh'] = 3
-   clOpt['st'] = 1
-   clOpt['pa'] = 1
-   clOpt['dropOut'] = 0
-   clOpt['lm'] = 1
-
-   --A anc Ah size
-   local imSize   ={64,32}
-   local channels = {1, 32} -- layer maps sizes
-   local prevE  = {channels[1]*2,channels[2]*2}
-   local cellCh = {32,prevE[1]} --  Out put size of lstm -- This is same as output channels
-   local lstmCh = {cellCh[2]+prevE[1],prevE[2]} --  Out put size of lstm -- last chnel has no R_l+1 concat
-   clOpt['cellCh'] = cellCh
-   clOpt['lstmCh'] = lstmCh
-
-   -- create graph
-   print('Creating model:')
-   main  = mNet(nlayers,input_stride,poolsize,channels,clOpt)
-   dofile('utils.lua')
-   local clones = clone_many_times(main, opt.nSeq)
-
 
    -- test:
    print('Testing model:')
@@ -116,9 +104,9 @@ local function main()
             inTable[3*(L-1)+3] = state[L][2] -- prev Cell
             inTable[3*(L-1)+4] = state[L][3] -- prev Hidden
          else
-            inTable[3*(L-1)+2] = outTable[3*(L-1)+2] -- Prev E
-            inTable[3*(L-1)+3] = outTable[3*(L-1)+3] -- prev Cell
-            inTable[3*(L-1)+4] = outTable[3*(L-1)+4] -- prev Hidden
+            inTable[3*(L-1)+2] = outTable[i-1][4*(L-1)+1] -- Prev E
+            inTable[3*(L-1)+3] = outTable[i-1][4*(L-1)+2] -- prev Cell
+            inTable[3*(L-1)+4] = outTable[i-1][4*(L-1)+3] -- prev Hidden
          end
       end
 

@@ -2,18 +2,15 @@
 
 A model of https://coxlab.github.io/prednet/
 
-There are 2 version V2 is lstm integrated in one main nnGraph model
+model : m2NetV2.lua under models
 
-the other one is convLSTM and main models are speparated.
+input
 
-Run 'th predNet.lua' To run predNet model it works with 2 layers and nSeq
+nlayers x {``image  E  C  R }
 
-Models are in models folder
+output
 
-m2Net : Is main model for predNet
+nlayers x { E C R Ah}
 
-convLSTM : Convolution lstm for the predNet
 
-In predNet.lua it do top down fist and update convLSTM and get output of lstm
-
-After top down get out put of lstm. Do down up with m2Net.
+You can test th predNetV2.lua then print input and output table.

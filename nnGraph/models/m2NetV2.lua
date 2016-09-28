@@ -52,8 +52,8 @@ for L = nlayers, 1 , -1 do
       inR = {upR,inputs[3*(L-1)+2]} - nn.JoinTable(1)
       outLstm[L] = {inR, inputs[3*(L-1)+3],inputs[3*(L-1)+4]} - convlstm[L]
    end
-   outputs[3*(L-1)+3] = outLstm[L] - nn.SelectTable(1)
-   outputs[3*(L-1)+4] = outLstm[L] - nn.SelectTable(2)
+   outputs[4*(L-1)+2] = outLstm[L] - nn.SelectTable(1)
+   outputs[4*(L-1)+3] = outLstm[L] - nn.SelectTable(2)
 end
 --Down Up
 E = {}
@@ -74,7 +74,7 @@ for L = 1, nlayers do
       x = inputs[1]
    else
       --pE previous layer E
-      pE = outputs[3*(L-2)+2]
+      pE = outputs[4*(L-2)+1]
       cA = backend.SpatialConvolution(clOpt.cellCh[L],channels[L], 3, 3, input_stride, input_stride, 1, 1) -- A convolution, maxpooling
       A = pE - cA - Re - Mp
       pE:annotate{graphAttributes = {color = 'green', fontcolor = 'green'}}
@@ -85,18 +85,19 @@ for L = 1, nlayers do
    iR:annotate{graphAttributes = {color = 'blue', fontcolor = 'green'}}
    local P = iR - Ah - nn.ReLU()
    if L == 1 then
-      outputs[1] = iR - Ah - nn.ReLU() -- this layer E
+      outputs[4*(L-1)+4] = iR - Ah - nn.ReLU() -- this layer E
       EN = {x, P} - nn.CSubTable(1)   -- PReLU instead of +/-ReLU
       EP = {P, x} - nn.CSubTable(1)   -- PReLU instead of +/-ReLU
-      outputs[3*(L-1)+2] = {EN, EP} - nn.JoinTable(1)  -- this layer E
+      outputs[4*(L-1)+1] = {EN, EP} - nn.JoinTable(1)  -- this layer E
    else
+      outputs[4*(L-1)+4] = iR - Ah - nn.ReLU() -- this layer E
       EN = {A, P} - nn.CSubTable(1) -- PReLU instead of +/-ReLU
       EN:annotate{graphAttributes = {color = 'red', fontcolor = 'green'}}
       EP = {P, A} - nn.CSubTable(1) -- PReLU instead of +/-ReLU
       EP:annotate{graphAttributes = {color = 'red', fontcolor = 'blue'}}
       E[L]  = {EN, EP} - nn.JoinTable(1)
       E[L]:annotate{graphAttributes = {color = 'blue', fontcolor = 'blue'}}
-      outputs[3*(L-1)+2] = E[L]-- this layer E
+      outputs[4*(L-1)+1] = E[L]-- this layer E
    end
    -- set outputs:
 end
