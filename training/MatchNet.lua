@@ -13,10 +13,10 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    E={} -- output from layers are saved to connect to next layer input
    R={} -- next layer R also connect directly to this layer R
 
-   -- Ah = prediction branch, A_hat in paper
+   -- Ah = prediction / generator branch, A_hat in paper, E = error output
    -- This module creates the MatchNet network model, defined as:
    -- inputs = {same_layer_E, same_layer_R}
-   -- outputs = {E , R, Ah}, E == discriminator output, Ah == generator output
+   -- outputs = {E, R, Ah}
 
    -- creating input / output list:
    local inputs = {}
@@ -29,7 +29,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       inputs[2*L+1] = nn.Identity()() -- same_layer_R (from previous time)
    end
    
-   -- generating network layers:
+   -- generating network layers (2 for loops):
 
    -- first recurrent branch needs to be updated from top:
    for L = nlayers,1,-1 do
