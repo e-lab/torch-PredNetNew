@@ -11,7 +11,7 @@ local sc = backend.SpatialConvolution
 local scNB = backend.SpatialConvolution:noBias()
 local sg = backend.Sigmoid
 
-function lstm(inDim, outDim, opt, up)
+function lstm(inDim, outDim, opt)
   local dropout = opt.dropOut or 0
   local kw, kh  = opt.kw, opt.kh
   local stw, sth = opt.st, opt.st
@@ -75,16 +75,11 @@ function lstm(inDim, outDim, opt, up)
         nn.CMulTable()({inGate,     inTanh})
       })
     -- gated cells form the output
-    local nextH = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
+    local out = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
 
     table.insert(outputs, nextC)
    --Apply dropout
-   if dropout > 0 then nextH = nn.Dropout(dropout)(nextH):annotate{name='drop_final'} end
-   if up then
-      out = nextH - nn.SpatialUpSamplingNearest(up)
-    else
-       out = nextH
-    end
+   if dropout > 0 then out = nn.Dropout(dropout)(nextH):annotate{name='drop_final'} end
     table.insert(outputs, out)
   end
 
