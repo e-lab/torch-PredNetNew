@@ -155,11 +155,11 @@ local function main()
       end
       
       if opt.display then
-        _im1_ = image.display{image={ inputTable[#inputTable-4]:squeeze(),
-                                      inputTable[#inputTable-3]:squeeze(),
-                                      inputTable[#inputTable-2]:squeeze(),
-                                      inputTable[#inputTable-1]:squeeze(),
-                                      inputTable[#inputTable]:squeeze(),
+        _im1_ = image.display{image={ seqTable[#seqTable-4]:squeeze(),
+                                      seqTable[#seqTable-3]:squeeze(),
+                                      seqTable[#seqTable-2]:squeeze(),
+                                      seqTable[#seqTable-1]:squeeze(),
+                                      seqTable[#seqTable]:squeeze(),
                                       target:squeeze(),
                                       output:squeeze() },
                               win = _im1_, nrow = 7, legend = 't-4, -3, -2, -2, t, Target, Output'}
