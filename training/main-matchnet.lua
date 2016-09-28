@@ -21,11 +21,10 @@ opt = lapp [[
   --useGPU                    use GPU in training
 
   Training parameters:
-  -r,--learningRate       (default 1e-3)        learning rate
-  -d,--learningRateDecay  (default 1e-7)        learning rate decay (in # samples)
-  -w,--weightDecay        (default 5e-4)        L2 penalty on the weights
-  -m,--momentum           (default 0.9)         momentum
-
+  -r,--learningRate       (default 0.001)       learning rate
+  -d,--learningRateDecay  (default 0)           learning rate decay
+  -w,--weightDecay        (default 0)           L2 penalty on the weights
+  
   Model parameters:
   --nlayers       (default 2)     number of layers of MatchNet
   --inputSizeW    (default 64)    width of each input patch or image
@@ -38,10 +37,8 @@ opt = lapp [[
   --poolsize      (default 2)     maxpooling size
 
   --dataBig                       use large dataset or reduced one
-  --statInterval  (default 50)    interval for printing error
-  -v                              verbose output
+  -v, --verbose                   verbose output
   --display                       display stuff
-  --displayInterval (default 50)
   -s,--save                       save models
   --saveInterval (default 10000)
 ]]
@@ -176,23 +173,32 @@ local function main()
     -- compute statistics / report error
     if math.fmod(t , opt.nSeq) == 1 then
       print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..eta )
+      
       err = 0
-      if opt.save and math.fmod(t, opt.nSeq*1000) == 1 and t>1 then       
+      
+      local pic = { seqTable[#seqTable-4]:squeeze(),
+                    seqTable[#seqTable-3]:squeeze(),
+                    seqTable[#seqTable-2]:squeeze(),
+                    seqTable[#seqTable-1]:squeeze(),
+                    seqTable[#seqTable]:squeeze(),
+                    target:squeeze(),
+                    output:squeeze() }
+
+      if opt.display then
+        _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
+                              legend = 't-4, -3, -2, -2, t, Target, Output'}
+      else
+        if math.fmod(t, opt.saveInterval) == 1 then
+          image.save(opt.dir ..'/pic_target_'..t..'.jpg', target)
+          image.save(opt.dir ..'/pic_output_'..t..'.jpg', output)
+        end
+      end
+
+      if opt.save and math.fmod(t, opt.saveInterval) == 1 and t>1 then
         torch.save(opt.dir .. '/model_' .. t .. '.net', model)
         torch.save(opt.dir .. '/optimState_' .. t .. '.t7', optimState)
       end
-      
-      if opt.display then
-        _im1_ = image.display{image={ seqTable[#seqTable-4]:squeeze(),
-                                      seqTable[#seqTable-3]:squeeze(),
-                                      seqTable[#seqTable-2]:squeeze(),
-                                      seqTable[#seqTable-1]:squeeze(),
-                                      seqTable[#seqTable]:squeeze(),
-                                      target:squeeze(),
-                                      output:squeeze() },
-                                      min = 0, max = 1, 
-                              win = _im1_, nrow = 7, legend = 't-4, -3, -2, -2, t, Target, Output'}
-      end  
+  
     end
   end
   print ('Training completed!')
