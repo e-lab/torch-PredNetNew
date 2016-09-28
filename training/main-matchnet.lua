@@ -29,7 +29,7 @@ opt = lapp [[
   --nlayers       (default 2)     number of layers of MatchNet
   --inputSizeW    (default 64)    width of each input patch or image
   --inputSizeH    (default 64)    width of each input patch or image
-  --maxIter       (default 30000) max number of updates
+  --maxIter       (default 30000) max number of training updates
   
   --nSeq          (default 19)    input video sequence lenght
   --nFilters      (default {1,32,32,32})  number of filters in the encoding/decoding layers
@@ -90,7 +90,7 @@ local function main()
   model:training()
 
   -- train:
-  for t = 1,opt.maxIter do
+  for t = 1, opt.maxIter do
 
     -- define eval closure
     local eval_E = function(w)
@@ -98,8 +98,8 @@ local function main()
  
       model:zeroGradParameters()
 
-      -- setup initial variables:
-      local inTableG0 = {} -- global inputs reset
+      -- reset initial network state:
+      local inTableG0 = {}
       for L=1, opt.nlayers do
          table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
          if L==1 then 
@@ -108,20 +108,22 @@ local function main()
             table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
          end
       end
-      inputTable = {}
-      
-      target  = torch.Tensor()
+
+      -- get input video sequence data:
+      seqTable = {} -- stores the input video sequence
+      target = torch.Tensor()
       sample = datasetSeq[t]
       data = sample[1]
-      for i = 1,data:size(1)-1 do
-        table.insert(inputTable, data[i])
+      for i = 1, data:size(1)-1 do
+        table.insert(seqTable, data[i])
       end
-
       target:resizeAs(data[1]):copy(data[data:size(1)])
       if opt.useGPU then target = target:cuda() end
       
+      -- prepare table of states and input:
+      table.insert(inTableG0, seqTable)
+      
       -- estimate f and gradients
-      table.insert(inTableG0, inputTable)
       output = model:forward(inTableG0)
       f = f + criterion:forward(output, target)
       local dE_dy = criterion:backward(output, target)
