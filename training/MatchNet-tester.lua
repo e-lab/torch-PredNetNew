@@ -38,11 +38,11 @@ for L=1, opt.nlayers do
    end
 -- here are immediate values as a reminder:
 -- table.insert( inTable, torch.ones(1,64,64)) -- input
--- table.insert( inTable, torch.zeros(1,64,64)) -- previous time E
--- table.insert( inTable, torch.zeros(32,64,64)) -- previous time R
+-- table.insert( inTable, torch.zeros(2,64,64)) -- previous time E
+-- table.insert( inTable, torch.zeros(1,64,64)) -- previous time R
 -- if nlayers == 2 then
 -- 2nd layer
--- table.insert( inTable, torch.zeros(32,32,32)) -- previous time E
+-- table.insert( inTable, torch.zeros(64,32,32)) -- previous time E
 -- table.insert( inTable, torch.zeros(32,32,32))  -- previous time R
 end
 
