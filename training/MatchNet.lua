@@ -37,7 +37,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       -- R / recurrent branch:
       up = nn.SpatialUpSamplingNearest(poolsize)
       if L == nlayers then
-         cR = nn.SpatialConvolution(2*mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E
+         cR = nn.SpatialConvolution(2*mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E (2x because E is 2xL)
          RE = {inputs[1+2*L-1]} - cR -- same layer E
          R[L] = {RE, inputs[1+2*L]} - nn.CAddTable(1) -- same_layer_E processed +  same_layer_R (from previous time)
       else
