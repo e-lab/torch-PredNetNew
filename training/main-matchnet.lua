@@ -46,7 +46,7 @@ opt = lapp [[
   --saveInterval (default 10000)
 ]]
 
-opt.nFilters  = {1,32,32,32} -- number of filters in the encoding/decoding layers
+opt.nFilters  = {1,32,64,128} -- number of filters in the encoding/decoding layers
 
 torch.setdefaulttensortype('torch.FloatTensor') 
 torch.manualSeed(opt.seed)
@@ -162,6 +162,7 @@ local function main()
                                       seqTable[#seqTable]:squeeze(),
                                       target:squeeze(),
                                       output:squeeze() },
+                                      min = 0, max = 1, 
                               win = _im1_, nrow = 7, legend = 't-4, -3, -2, -2, t, Target, Output'}
       end  
     end
