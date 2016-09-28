@@ -22,7 +22,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    local inputs = {}
    local outputs = {}
 
-   -- initializing inputs:
+   -- initializing inputs: (1+2*nlayers) in total
    inputs[1] = nn.Identity()() -- global input
    for L = 1, nlayers do
       inputs[2*L] = nn.Identity()() -- same_layer_E (from previous time)
@@ -74,7 +74,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       E[L] = { {A, Ah} - nn.CSubTable(1) - nn.ReLU(), {Ah, A} - nn.CSubTable(1) - nn.ReLU() } - nn.JoinTable(1) -- same and PredNet model
       if testing then E[L]:annotate{graphAttributes = {color = 'blue', fontcolor = 'black'}} end
 
-      -- output list:
+      -- output list ( 3 for each layer, 3*nlayers in total):
       outputs[3*L-2] = E[L] -- this layer E
       outputs[3*L-1] = R[L] -- this layer R
       outputs[3*L] = Ah -- prediction output
