@@ -32,7 +32,6 @@ opt = lapp [[
   --maxIter       (default 30000) max number of training updates
   
   --nSeq          (default 19)    input video sequence lenght
-  --nFilters      (default {1,32,32,32})  number of filters in the encoding/decoding layers
   --stride        (default 1)     stride in convolutions
   --poolsize      (default 2)     maxpooling size
 
