@@ -10,7 +10,7 @@ nngraph.setDebug(true)
 
 -- model parameters:
 local opt = {}
-opt.nlayers = 2
+opt.nlayers = 1
 opt.inputSizeW = 64
 opt.stride = 1
 opt.poolsize = 2
@@ -32,7 +32,7 @@ table.insert( inTable, torch.ones(opt.nFilters[1], opt.inputSizeW, opt.inputSize
 for L=1, opt.nlayers do
    table.insert( inTable, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E
    if L==1 then 
-      table.insert( inTable, torch.zeros(opt.nFilters[L+1], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
+      table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
    else
       table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
    end
