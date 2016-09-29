@@ -2,9 +2,9 @@ function getdataSeq_mnist(datafile, big)
    
    local data 
    if big then 
-      data = torch.DiskFile(datafile,'r'):readObject() -- uncomment this line if dataset in ascii format
+      data = torch.DiskFile(datafile,'r'):readObject() -- if dataset in ascii format
    else
-      data = torch.load(datafile) -- uncomment this line if dataset in binary format
+      data = torch.load(datafile) -- if dataset in binary format
    end
    
    local datasetSeq ={}
@@ -13,7 +13,7 @@ function getdataSeq_mnist(datafile, big)
    local nseq  = data:size(2)
    local nrows = data:size(4)
    local ncols = data:size(5)
-   print (nsamples .. ' ' .. nseq .. ' ' .. nrows .. ' ' .. ncols)
+   print ('Training data size: '..nsamples ..' '..nseq..' '..nrows..' '..ncols)
    function datasetSeq:size()
       return nsamples
    end
