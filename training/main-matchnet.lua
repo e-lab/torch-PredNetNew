@@ -87,7 +87,7 @@ local function main()
   print('Number of grads ' .. dE_dw:nElement())
 
   local err = 0
-  local epoch = 0
+  local epoch = 1
  
   local optimState = {
     learningRate = opt.learningRate,
