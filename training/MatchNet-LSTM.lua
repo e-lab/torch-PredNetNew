@@ -1,7 +1,7 @@
 -- Eugenio Culurciello
 -- August 2016
 -- MatchNet: a model of PredNet from: https://arxiv.org/abs/1605.08104
--- LSTM version from SangPil Kim
+-- convLSTM model from SangPil Kim
 
 require 'nn'
 require 'nngraph'
@@ -19,8 +19,8 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
 
    -- Ah = prediction / generator branch, A_hat in paper, E = error output
    -- This module creates the MatchNet network model, defined as:
-   -- inputs = {same_layer_E, same_layer_C, same_layer_H}
-   -- outputs = {E, C, H, Ah}
+   -- inputs = { E(t-1), C(t-1), H(t-1) }, where t-1 = previous instant
+   -- outputs = { E(t), C(t), H(t), Ah(t) }, where t = this instant
 
    -- creating input / output list:
    local inputs = {}
@@ -29,9 +29,9 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    -- initializing inputs: 1 + 3*nlayers in total
    inputs[1] = nn.Identity()() -- global input
    for L = 1, nlayers do
-      inputs[3*L-1] = nn.Identity()() -- same_layer_E (from previous time) / error output
-      inputs[ 3*L ] = nn.Identity()() -- same_layer_C (from previous time) / LSTM
-      inputs[3*L+1] = nn.Identity()() -- same_layer_H (from previous time) / LSTM
+      inputs[3*L-1] = nn.Identity()() -- E(t-1), layer error output
+      inputs[ 3*L ] = nn.Identity()() -- C(t-1), LSTM cell state
+      inputs[3*L+1] = nn.Identity()() -- H(t-1), LSTM hidden state
    end
    
    -- generating network layers (2 for loops):
@@ -43,15 +43,12 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       -- R / recurrent branch:
       up = nn.SpatialUpSamplingNearest(poolsize)
       if L == nlayers then
-         -- cR = nn.SpatialConvolution(2*mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E (2x because E is 2xL)
-         RE = {inputs[3*L-1]} - convlstm[L] -- same layer E
-         R[L] = {RE, inputs[1+2*L]} - nn.CAddTable(1) -- same_layer_E processed +  same_layer_R (from previous time)
+         -- input to convLSTM: E(t-1), C(t-1), H(t-1)
+         outLstm[L] = { inputs[3*L-1], inputs[3*L], inputs[3*L+1] } - convlstm[L]
       else
-         cRE = nn.SpatialConvolution(2*mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- same_layer_E (same dims)
-         cRR = nn.SpatialConvolution(mapss[L+1], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- next_layer_R (higher dims)
-         RR = {R[L+1]} - up - cRR -- upsampling of next_layer_R + conv cRR
-         RE = {inputs[3*L-1]} - cRE -- same_layer_E + conv cRE 
-         R[L] = {RR, RE, inputs[1+2*L]} - nn.CAddTable(1) -- add all R and same_layer_R
+         upR = outLstm[L+1] - nn.SelectTable(2) - up -- select 2nd = LSTM cell state
+         inR = { upR, inputs[3*L-1] } - nn.JoinTable(1) -- join R(t) from upper layer and E(t-1)
+         outLstm[L] = { inR, inputs[3*L], inputs[3*L+1] } - convlstm[L]
       end
       if testing then R[L]:annotate{graphAttributes = {color = 'red', fontcolor = 'black'}} end
    end
@@ -73,7 +70,8 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
 
       -- A-hat branch:
       cAh = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
-      Ah = {R[L]} - cAh - nn.ReLU()
+      iR = outLstm[L] - nn.SelectTable(2) -- select 2nd = LSTM cell state
+      Ah = {iR} - cAh - nn.ReLU()
       op = nn.PReLU(mapss[L])
 
       -- E[L] = {A, Ah} - nn.CSubTable(1) - op -- PReLU instead of +/-ReLU
