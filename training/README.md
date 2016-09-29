@@ -1,17 +1,11 @@
-# convLSTM test
-
-Simplified code and test from: https://github.com/viorik/ConvLSTM
+# MatchNet training
 
 To run:
 
-1: Install rnn (Element Research) and other required packages
-
-2: Download moving MNIST examples from: https://www.dropbox.com/sh/fvsqod4uv7yp0dp/AAAHoHUjkXg4mW6OvV91TgaEa (small is a 100-sample test, otherwise use the larger ones)
-
-3: run: ```qlua main-autoencoder.lua```
+1: Download dataset: moving [MNIST examples](https://www.dropbox.com/sh/fvsqod4uv7yp0dp/AAAHoHUjkXg4mW6OvV91TgaEa). Small is a 100-sample test, otherwise use the larger ones with 8000 samples. This dataset originated from: http://mi.eng.cam.ac.uk/~vp344/
 
 
-## to run MatchNet:
+## to train MatchNet:
 
-3: run: ```qlua main-matchnet.lua --nlayers 2``` to train with 2 layers (1-3 layer have been tested ok)
+3: run: ```qlua main-matchnet.lua --nlayers 3``` to train with 2 layers (1-4 layer possible)
 
