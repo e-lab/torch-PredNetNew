@@ -1,11 +1,7 @@
 function getdataSeq_mnist(datafile, big)
    
    local data 
-   if big then 
-      data = torch.DiskFile(datafile,'r'):readObject() -- if dataset in ascii format
-   else
-      data = torch.load(datafile) -- if dataset in binary format
-   end
+   data = torch.load(datafile) -- if dataset in binary format
    
    local datasetSeq ={}
    data = data:float()/255.0

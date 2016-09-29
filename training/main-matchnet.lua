@@ -70,8 +70,8 @@ local function main()
   print('Using large dataset?', opt.dataBig)
   local dataFile, datasetSeq
   if opt.dataBig then
-    dataFile  = 'dataset_fly_64x64_lines_train.t7'
-    dataFileTest = 'dataset_fly_64x64_lines_test.t7'
+    dataFile  = 'data-big-train.t7'
+    dataFileTest = 'data-big-test.t7'
   else
     dataFile  = 'data-small-train.t7'
     dataFileTest = 'data-small-test.t7'
