@@ -17,7 +17,12 @@ opt.poolsize = 2
 opt.nFilters = {1, 32, 64, 128}
 local clOpt = {}
 clOpt['nSeq'] = 19
-clOpt['stride'] = 1
+clOpt['kw'] = 3
+clOpt['kh'] = 3
+clOpt['st'] = 1
+clOpt['pa'] = 1
+clOpt['dropOut'] = 0
+clOpt['lm'] = 1
 
 -- instantiate MatchNet:
 print('Creating model')

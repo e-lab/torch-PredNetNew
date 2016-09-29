@@ -5,13 +5,11 @@
 require 'nn'
 require 'nngraph'
 
--- Set up backend
-local backend = nn
-local sc = backend.SpatialConvolution
-local scNB = backend.SpatialConvolution:noBias()
-local sg = backend.Sigmoid
+local sc = nn.SpatialConvolution
+local scNB = nn.SpatialConvolution:noBias()
+local sg = nn.Sigmoid
 
-function lstm(inDim, outDim, opt)
+function convLSTM(inDim, outDim, opt)
   local dropout = opt.dropOut or 0
   local kw, kh  = opt.kw, opt.kh
   local stw, sth = opt.st, opt.st
@@ -43,21 +41,21 @@ function lstm(inDim, outDim, opt)
     -- In put convolution
     local i2Ig, i2Fg, i2Og, i2It
     if L == 1 then
-       i2Ig  = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Ig_'..L}
-       i2Fg = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Fg_'..L}
-       i2Og = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Og_'..L}
-       i2It = sc(inDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2It_'..L}
+       i2Ig = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Ig_'..L}
+       i2Fg = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Fg_'..L}
+       i2Og = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Og_'..L}
+       i2It = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2It_'..L}
     else
-       i2Ig  = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Ig_'..L}
-       i2Fg = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Fg_'..L}
-       i2Og = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2Og_'..L}
-       i2It = sc(outDim, outDim, kw, kh, stw, sth,paw,pah)(x):annotate{name='i2It_'..L}
+       i2Ig = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Ig_'..L}
+       i2Fg = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Fg_'..L}
+       i2Og = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Og_'..L}
+       i2It = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2It_'..L}
     end
 
-    local h2Ig  = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevH):annotate{name='h2Ig_'..L}
-    local h2Fg = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevH):annotate{name='h2Fg_'..L}
-    local h2Og = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevC):annotate{name='h2Og_'..L}
-    local h2It = scNB(outDim, outDim, kw, kh, stw, sth,paw,pah)(prevC):annotate{name='h2It_'..L}
+    local h2Ig = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{name='h2Ig_'..L}
+    local h2Fg = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{name='h2Fg_'..L}
+    local h2Og = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevC):annotate{name='h2Og_'..L}
+    local h2It = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevC):annotate{name='h2It_'..L}
 
     local ig = nn.CAddTable()({i2Ig, h2Ig})
     local fg = nn.CAddTable()({i2Fg, h2Fg})
@@ -68,11 +66,11 @@ function lstm(inDim, outDim, opt)
     local inGate = sg()(ig)
     local fgGate = sg()(fg)
     local ouGate = sg()(og)
-    local inTanh = backend.Tanh()(it)
+    local inTanh = nn.Tanh()(it)
     -- perform the LSTM update
-    local nextC           = nn.CAddTable()({
+    local nextC = nn.CAddTable()({
         nn.CMulTable()({fgGate, prevC}),
-        nn.CMulTable()({inGate,     inTanh})
+        nn.CMulTable()({inGate, inTanh})
       })
     -- gated cells form the output
     local out = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
