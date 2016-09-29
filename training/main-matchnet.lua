@@ -190,12 +190,10 @@ local function main()
                     seqTable[#seqTable]:squeeze(),
                     target:squeeze(),
                     output:squeeze() }
-
-    end
-
-    if opt.display then
-      _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
+      if opt.display then
+        _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
                             legend = 't-4, -3, -2, -2, t, Target, Output'}
+      end
     end
 
     if opt.savePics and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
