@@ -22,14 +22,13 @@ opt = lapp [[
 
   Data parameters:
   --dataBig                                use large dataset or reduced one
-  --dataEpoch             (default 8000)   size dataset, epoch definition, learning rate adjust, save
-
+  
   Training parameters:
-  -r,--learningRate       (default 0.001)  learning rate
+  -r,--learningRate       (default 0.1)    learning rate
   -d,--learningRateDecay  (default 0)      learning rate decay
   -w,--weightDecay        (default 0)      L2 penalty on the weights
   -m,--momentum           (default 0.9)    momentum parameter
-  --maxIter               (default 30000)  max number of training updates
+  --maxEpochs             (default 10)     max number of training epochs
   
   Model parameters:
   --nlayers               (default 2)     number of layers of MatchNet
@@ -98,6 +97,10 @@ local function main()
   
   model:training()
 
+  -- set training iterations and epochs according to dataset size:
+  opt.dataEpoch = datasetSeq:size() 
+  opt.maxIter = opt.dataEpoch * opt.maxEpochs
+
   -- train:
   for t = 1, opt.maxIter do
 
@@ -162,7 +165,8 @@ local function main()
    
     if math.fmod(t, opt.dataEpoch) == 0 then
       epoch = epoch + 1
-      opt.learningRate = opt.learningRate*math.pow(0.5,epoch/50)  
+      print('Training epoch #', epoch)
+      opt.learningRate = opt.learningRate*math.pow(0.5,epoch/opt.maxEpochs)  
       optimState.learningRate = opt.learningRate  
     end
     
