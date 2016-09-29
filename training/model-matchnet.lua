@@ -5,12 +5,20 @@
 --
 
 require 'nn'
-require 'MatchNet-RNN'
-
+require 'MatchNet-LSTM'
 -- nngraph.setDebug(true)
 
+local clOpt = {}
+clOpt['nSeq'] = opt.nSeq
+clOpt['kw'] = 3
+clOpt['kh'] = 3
+clOpt['st'] = opt.stride
+clOpt['pa'] = opt.padding
+clOpt['dropOut'] = 0
+clOpt['lm'] = opt.lstmLayers
+
 -- instantiate MatchNet:
-local unit = mNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, {opt.nSeq, opt.stride}, false) -- false testing mode
+local unit = mNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, false) -- false testing mode
 -- nngraph.annotateNodes()
 -- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
@@ -79,12 +87,9 @@ local inTable = {}
 local inSeqTable = {}
 for i = 1, opt.nSeq do table.insert( inSeqTable,  torch.ones( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) end -- input sequence
 for L=1, opt.nlayers do
-   table.insert( inTable, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- previous time E (2x because E is 2xL)
-   if L==1 then 
-      table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
-   else
-      table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- previous time R
-   end
+   table.insert( inTable, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- E(t-1)
+   table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- C(t-1)
+   table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- H(t-1)
 end
 table.insert( inTable,  inSeqTable ) -- input sequence
 local outTable = model:updateOutput(inTable)

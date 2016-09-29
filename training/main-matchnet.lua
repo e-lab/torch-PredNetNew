@@ -32,10 +32,12 @@ opt = lapp [[
   
   Model parameters:
   --nlayers               (default 2)     number of layers of MatchNet
+  --lstmLayers            (default 1)     number of layers of ConvLSTM
   --inputSizeW            (default 64)    width of each input patch or image
   --inputSizeH            (default 64)    width of each input patch or image
   --nSeq                  (default 19)    input video sequence lenght
   --stride                (default 1)     stride in convolutions
+  --padding               (default 1)     padding in convolutions
   --poolsize              (default 2)     maxpooling size
 
   Display and save parameters:
