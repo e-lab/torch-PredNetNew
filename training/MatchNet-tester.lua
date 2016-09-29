@@ -2,7 +2,7 @@
 -- August 2016
 -- MatchNet: a model of PredNet from: https://arxiv.org/abs/1605.08104
 
-require 'MatchNet'
+require 'MatchNet-RNN'
 local c = require 'trepl.colorize'
 
 torch.setdefaulttensortype('torch.FloatTensor')

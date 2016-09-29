@@ -5,7 +5,7 @@
 --
 
 require 'nn'
-require 'MatchNet'
+require 'MatchNet-RNN'
 
 -- nngraph.setDebug(true)
 
