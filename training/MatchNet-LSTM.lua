@@ -11,11 +11,12 @@ local c = require 'trepl.colorize'
 
 
 function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
-   local pE, A, upR, C, H, Ah, E, cA, mA, cAh, up, op, convlstm
+   local pE, A, upR, C, H, Ah, E, R, cA, mA, cAh, up, op, convlstm
    E={} -- output from layers are saved to connect to next layer input
    C={} -- LSTM cell state
    H={} -- LSTM hidden state
-   convlstm = {} -- convLSTM operators
+   convlstm = {} -- convLSTM modules
+   R = {} -- output from convLSTM modules
 
    -- Ah = prediction / generator branch, A_hat in paper, E = error output
    -- This module creates the MatchNet network model, defined as:
@@ -38,17 +39,23 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
 
    -- first recurrent branch needs to be updated from top:
    for L = nlayers,1,-1 do
-      -- create convLSTM operator:
-      convlstm[L] = convLSTM(2*mapss[L], mapss[L], clOpt)
       -- R / recurrent branch:
       up = nn.SpatialUpSamplingNearest(poolsize)
       if L == nlayers then
+         -- create convLSTM modules:
+         convlstm[L] = convLSTM(2*mapss[L], mapss[L], clOpt)
          -- input to convLSTM: E(t-1), C(t-1), H(t-1)
-         outLstm[L] = { inputs[3*L-1], inputs[3*L], inputs[3*L+1] } - convlstm[L]
+         R[L] = { inputs[3*L-1], inputs[3*L], inputs[3*L+1] } - convlstm[L]
       else
-         upR = outLstm[L+1] - nn.SelectTable(2) - up -- select 2nd = LSTM cell state
+         -- create convLSTM modules:
+         -- if L == 1 then
+            -- convlstm[L] = convLSTM(4*mapss[L], mapss[L], clOpt)
+         -- else
+            convlstm[L] = convLSTM(mapss[L+1]+2*mapss[L], mapss[L], clOpt)
+         -- end
+         upR = R[L+1] - nn.SelectTable(2) - up -- select 2nd = LSTM cell state
          inR = { upR, inputs[3*L-1] } - nn.JoinTable(1) -- join R(t) from upper layer and E(t-1)
-         outLstm[L] = { inR, inputs[3*L], inputs[3*L+1] } - convlstm[L]
+         R[L] = { inR, inputs[3*L], inputs[3*L+1] } - convlstm[L]
       end
       if testing then R[L]:annotate{graphAttributes = {color = 'red', fontcolor = 'black'}} end
    end
@@ -70,7 +77,7 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
 
       -- A-hat branch:
       cAh = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
-      iR = outLstm[L] - nn.SelectTable(2) -- select 2nd = LSTM cell state
+      iR = R[L] - nn.SelectTable(2) -- select 2nd = LSTM cell state
       Ah = {iR} - cAh - nn.ReLU()
       op = nn.PReLU(mapss[L])
 
@@ -79,10 +86,10 @@ function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       if testing then E[L]:annotate{graphAttributes = {color = 'blue', fontcolor = 'black'}} end
 
       -- output list 4 for each layer, 4 * nlayers in total):
-      outputs[4*L-3] = E[L] -- this layer E
-      outputs[4*L-2] = C[L] -- this layer C /LSTM
-      outputs[4*L-1] = H[L] -- this layer H / LSTM
-      outputs[4*L] = Ah -- prediction output
+      outputs[4*L-3] = E[L] -- E(t)
+      outputs[4*L-2] = R[L] - nn.SelectTable(1) -- C(t), LSTM cell state
+      outputs[4*L-1] = R[L] - nn.SelectTable(2) -- H(t), LSTM hidden state
+      outputs[4*L] = Ah -- prediction output (t)
    end
 
    local g = nn.gModule(inputs, outputs)
