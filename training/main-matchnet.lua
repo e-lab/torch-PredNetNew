@@ -16,7 +16,7 @@ require 'pl'
 lapp = require 'pl.lapp'
 opt = lapp [[
   Command line options:
-  --dir               (default 'results')  subdirectory to save experiments in
+  --savedir         (default './results')  subdirectory to save experiments in
   --seed                (default 1250)     initial random seed
   --useGPU                                 use GPU in training
 
@@ -42,12 +42,14 @@ opt = lapp [[
   -v, --verbose                           verbose output
   --display                               display stuff
   -s,--save                               save models
+  --savePics                              save output images examples
 ]]
 
 opt.nFilters  = {1,32,64,128} -- number of filters in the encoding/decoding layers
 
 torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(opt.seed)
+os.execute('mkdir '..opt.savedir)
 
 print('Using GPU?', opt.useGPU)
 
@@ -166,7 +168,7 @@ local function main()
     if math.fmod(t, opt.dataEpoch) == 0 then
       epoch = epoch + 1
       print('Training epoch #', epoch)
-      opt.learningRate = opt.learningRate/2--*math.pow(0.5,epoch/opt.maxEpochs)  
+      opt.learningRate = opt.learningRate * 3/4 --* 1/2
       optimState.learningRate = opt.learningRate  
     end
     
@@ -189,22 +191,23 @@ local function main()
                     target:squeeze(),
                     output:squeeze() }
 
-      if opt.display then
-        _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
-                              legend = 't-4, -3, -2, -2, t, Target, Output'}
-      else
-        if math.fmod(t, opt.dataEpoch) == 1 then
-          image.save(opt.dir ..'/pic_target_'..t..'.jpg', target)
-          image.save(opt.dir ..'/pic_output_'..t..'.jpg', output)
-        end
-      end
-
-      if opt.save and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
-        torch.save(opt.dir .. '/model_' .. t .. '.net', model)
-        torch.save(opt.dir .. '/optimState_' .. t .. '.t7', optimState)
-      end
-  
     end
+
+    if opt.display then
+      _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
+                            legend = 't-4, -3, -2, -2, t, Target, Output'}
+    end
+
+    if opt.savePics and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
+      image.save(opt.savedir ..'/pic_target_'..t..'.jpg', target)
+      image.save(opt.savedir ..'/pic_output_'..t..'.jpg', output)
+    end
+
+    if opt.save and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
+      torch.save(opt.savedir .. '/model_' .. t .. '.net', model)
+      torch.save(opt.savedir .. '/optimState_' .. t .. '.t7', optimState)
+    end
+  
   end
   print ('Training completed!')
   collectgarbage()
