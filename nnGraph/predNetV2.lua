@@ -61,64 +61,27 @@ local function main()
                                    target:squeeze() },
                            win = _im1_, nrow = 7, legend = 't-4, -3, -2, -2, t, Target, Output'}
    end
-   main = createModel(opt, channels, clOpt)
+   criterion, main = createModel(opt, channels, clOpt)
    print(inputTable[1]:size())
    -- one layer, not time dependency:
 
    -- test:
-   print('Testing model:')
-   local x,h,c,ht = {},{},{},{}
+   local e,h,c,ht = {} ,{} ,{} ,{}
    -- Init state for top LSTM
    local initState = {}
    for i = nlayers , 1, -1 do
-      x[i] = torch.Tensor(prevE[i],imSize[i],imSize[i]):zero()
-      c[i] = torch.Tensor(cellCh[i],imSize[i],imSize[i]):zero()
-      h[i] = c[i]:clone()
-      ht[i] = {}
-      --Here only lstm layer 1
-      table.insert(ht[i],c[i])
-      table.insert(ht[i],h[i])
+      initState[3*(i-1)+1] = torch.Tensor(prevE[i],imSize[i],imSize[i]):zero()
+      initState[3*(i-1)+2] = torch.Tensor(cellCh[i],imSize[i],imSize[i]):zero()
+      initState[3*(i-1)+3] = torch.Tensor(cellCh[i],imSize[i],imSize[i]):zero()
    end
-   for i = nlayers, 1, -1 do
-      initState[i] = {x[i],unpack(ht[i])}
-   end
+   print('Test initState')
+   print(initState)
 
+   print(inputTable)
+   print('Test model module')
+   input = {inputTable, unpack(initState)}
+   out = model:forward(input)
+   print(out:size())
 
-   --Top Down update convLSTM
-   --lstmState 1 layer LSTM {input, cell, output}
-   local lstmState,rnnI,inT = {} , {} , {}
-   local outTable = {}
-   for i = 1, nSeq do
-      print(i,' step processing')
-      if i == 1 then
-         state = initState
-         --Test initState
-      end
-      -- local nT = 1 -- time sequence length
-      local inTable = {}
-      image = inputTable[i]
-      table.insert(inTable, image) -- input Image
-      for L = nlayers, 1, -1 do
-         if i == 1 then
-            inTable[3*(L-1)+2] = state[L][1] -- Prev E
-            inTable[3*(L-1)+3] = state[L][2] -- prev Cell
-            inTable[3*(L-1)+4] = state[L][3] -- prev Hidden
-         else
-            inTable[3*(L-1)+2] = outTable[i-1][4*(L-1)+1] -- Prev E
-            inTable[3*(L-1)+3] = outTable[i-1][4*(L-1)+2] -- prev Cell
-            inTable[3*(L-1)+4] = outTable[i-1][4*(L-1)+3] -- prev Hidden
-         end
-      end
-
-      inT[i] = inTable
-
-      -- Update main down up
-      print('inTable')
-      print(inT[i])
-      outTable[i] = main:forward(inT[i])
-
-      print('outTable: ',i)
-      print(outTable[i])
-   end
 end
 main()

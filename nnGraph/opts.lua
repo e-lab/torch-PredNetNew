@@ -9,7 +9,7 @@ function m.parse(arg)
    ---options---
    cmd:option('-insize', 64, 'Input Image size')
    cmd:option('-nlayers', 2,  'PredNet layers')
-   cmd:option('-nSeq', 20,   'Number of Sequence')
+   cmd:option('-nSeq', 19,   'Number of Sequence')
    cmd:option('-dataFile', 'data-small-train.t7' , 'Train file Path')
    cmd:option('-dataFileTest', 'data-small-test.t7', 'Test file path')
    cmd:option('-seed', 1 ,'Seed number')
