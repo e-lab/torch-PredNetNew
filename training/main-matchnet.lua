@@ -24,6 +24,8 @@ opt = lapp [[
   -r,--learningRate       (default 0.001)       learning rate
   -d,--learningRateDecay  (default 0)           learning rate decay
   -w,--weightDecay        (default 0)           L2 penalty on the weights
+  -m,--momentum           (default 0.9)         momentum parameter
+  --lrDecayAfter          (default 20000)       epoch definition, learning rate adjust period
   
   Model parameters:
   --nlayers       (default 2)     number of layers of MatchNet
@@ -84,12 +86,11 @@ local function main()
   print('Number of parameters ' .. w:nElement())
   print('Number of grads ' .. dE_dw:nElement())
 
-  local eta = opt.learningRate
   local err = 0
   local epoch = 0
  
   local optimState = {
-    learningRate = opt.eta,
+    learningRate = opt.learningRate,
     momentum = opt.momentum,
     learningRateDecay = opt.learningRateDecay
   }
@@ -158,10 +159,10 @@ local function main()
       return f, dE_dw
     end
    
-    if math.fmod(t,20000) == 0 then
+    if math.fmod(t, opt.lrDecayAfter) == 0 then
       epoch = epoch + 1
-      eta = opt.learningRate*math.pow(0.5,epoch/50)  
-      optimState.learningRate = eta  
+      opt.learningRate = opt.learningRate*math.pow(0.5,epoch/50)  
+      optimState.learningRate = opt.learningRate  
     end
     
     _,fs = optim.adam(eval_E, w, optimState)
@@ -171,7 +172,7 @@ local function main()
     --------------------------------------------------------------------
     -- compute statistics / report error
     if math.fmod(t , opt.nSeq) == 1 then
-      print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..eta )
+      print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..opt.learningRate )
       
       err = 0
       
