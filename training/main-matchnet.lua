@@ -16,32 +16,33 @@ require 'pl'
 lapp = require 'pl.lapp'
 opt = lapp [[
   Command line options:
-  --dir    (default results)  subdirectory to save experiments in
-  --seed   (default 1250)     initial random seed
-  --useGPU                    use GPU in training
+  --dir               (default 'results')  subdirectory to save experiments in
+  --seed                (default 1250)     initial random seed
+  --useGPU                                 use GPU in training
+
+  Data parameters:
+  --dataBig                                use large dataset or reduced one
+  --dataEpoch             (default 8000)   size dataset, epoch definition, learning rate adjust, save
 
   Training parameters:
-  -r,--learningRate       (default 0.001)       learning rate
-  -d,--learningRateDecay  (default 0)           learning rate decay
-  -w,--weightDecay        (default 0)           L2 penalty on the weights
-  -m,--momentum           (default 0.9)         momentum parameter
-  --lrDecayAfter          (default 20000)       epoch definition, learning rate adjust period
+  -r,--learningRate       (default 0.001)  learning rate
+  -d,--learningRateDecay  (default 0)      learning rate decay
+  -w,--weightDecay        (default 0)      L2 penalty on the weights
+  -m,--momentum           (default 0.9)    momentum parameter
+  --maxIter               (default 30000)  max number of training updates
   
   Model parameters:
-  --nlayers       (default 2)     number of layers of MatchNet
-  --inputSizeW    (default 64)    width of each input patch or image
-  --inputSizeH    (default 64)    width of each input patch or image
-  --maxIter       (default 30000) max number of training updates
-  
-  --nSeq          (default 19)    input video sequence lenght
-  --stride        (default 1)     stride in convolutions
-  --poolsize      (default 2)     maxpooling size
+  --nlayers               (default 2)     number of layers of MatchNet
+  --inputSizeW            (default 64)    width of each input patch or image
+  --inputSizeH            (default 64)    width of each input patch or image
+  --nSeq                  (default 19)    input video sequence lenght
+  --stride                (default 1)     stride in convolutions
+  --poolsize              (default 2)     maxpooling size
 
-  --dataBig                       use large dataset or reduced one
-  -v, --verbose                   verbose output
-  --display                       display stuff
-  -s,--save                       save models
-  --saveInterval (default 10000)
+  Display and save parameters:
+  -v, --verbose                           verbose output
+  --display                               display stuff
+  -s,--save                               save models
 ]]
 
 opt.nFilters  = {1,32,64,128} -- number of filters in the encoding/decoding layers
@@ -159,7 +160,7 @@ local function main()
       return f, dE_dw
     end
    
-    if math.fmod(t, opt.lrDecayAfter) == 0 then
+    if math.fmod(t, opt.dataEpoch) == 0 then
       epoch = epoch + 1
       opt.learningRate = opt.learningRate*math.pow(0.5,epoch/50)  
       optimState.learningRate = opt.learningRate  
@@ -171,7 +172,7 @@ local function main()
 
     --------------------------------------------------------------------
     -- compute statistics / report error
-    if math.fmod(t , opt.nSeq) == 1 then
+    if math.fmod(t, opt.nSeq) == 1 then
       print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..opt.learningRate )
       
       err = 0
@@ -188,13 +189,13 @@ local function main()
         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
                               legend = 't-4, -3, -2, -2, t, Target, Output'}
       else
-        if math.fmod(t, opt.saveInterval) == 1 then
+        if math.fmod(t, opt.dataEpoch) == 1 then
           image.save(opt.dir ..'/pic_target_'..t..'.jpg', target)
           image.save(opt.dir ..'/pic_output_'..t..'.jpg', output)
         end
       end
 
-      if opt.save and math.fmod(t, opt.saveInterval) == 1 and t>1 then
+      if opt.save and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
         torch.save(opt.dir .. '/model_' .. t .. '.net', model)
         torch.save(opt.dir .. '/optimState_' .. t .. '.t7', optimState)
       end
@@ -204,4 +205,5 @@ local function main()
   print ('Training completed!')
   collectgarbage()
 end
+
 main()
