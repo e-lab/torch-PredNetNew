@@ -166,7 +166,7 @@ local function main()
     if math.fmod(t, opt.dataEpoch) == 0 then
       epoch = epoch + 1
       print('Training epoch #', epoch)
-      opt.learningRate = opt.learningRate*math.pow(0.5,epoch/opt.maxEpochs)  
+      opt.learningRate = opt.learningRate/2--*math.pow(0.5,epoch/opt.maxEpochs)  
       optimState.learningRate = opt.learningRate  
     end
     
