@@ -3,6 +3,8 @@ require 'optim'
 require 'image'
 require 'torch'
 require 'cutorch'
+require 'cudnn'
+require 'cunn'
 function train(opt)
    imSize = opt.imSize
    prevE  = opt.prevE
@@ -13,12 +15,15 @@ function train(opt)
    param, gradParam = predNet:getParameters()
    --Train model clones
    criterion, model = createModel(opt, predNet)
+   opt.gpu = true
    if opt.gpu then
       model:cuda()
+      criterion:cuda()
       predNet:cuda()
       param:cuda()
       gradParam:cuda()
    end
+   print(model)
    --Get dataset
    paths.dofile('data-mnist.lua')
    datasetSeq = getdataSeq_mnist(opt.dataFile) -- we sample nSeq consecutive frames
@@ -33,39 +38,40 @@ function train(opt)
    end
    -- Init state for top LSTM
    print('Test initState')
-   print(initState)
    if opt.gpu then
-      for _, p in ipairs(initState) do
-         p:cuda()
+      for i, p in ipairs(initState) do
+         initState[i] = p:cuda()
       end
    end
+   local eta0 = 1e-6
+   local eta = 1e-3
 --Training loop
    iterMax = datasetSeq:size(1) * 100
+   local optimState = {
+    learningRate = eta,
+    momentum = 0.9,
+    learningRateDecay = 0
+  }
+   model:training()
    for t =1 , iterMax do
 
-      local eta0 = 1e-6
-      local eta = 1e-3
 
       local err = 0
-      local iter = 0
-      local epoch = 0
-
-      rmspropconf = {learningRate = eta}
-      predNet:training()
        -- define eval closure
-      local feval = function()
+      local feval = function(param)
         local f = 0
 
          model:zeroGradParameters()
          sample = datasetSeq[t]
          frames = sample[1]
-         if opt.gpu then frames:cuda() end
          inputTable ={}
          for i = 1,frames:size(1)-1 do
-           table.insert(inputTable, frames[i])
+           table.insert(inputTable, frames[i]:cuda())
          end
 
-         target:resizeAs(frames[1]):copy(frames[frames:size(1)])
+         --target:resizeAs(frames[1]):copy(frames[frames:size(1)])
+         target = frames[20]
+         if opt.gpu then target = target:cuda() end
          -- test:
          local e,h,c,ht = {} ,{} ,{} ,{}
          --print(inputTable)
@@ -73,7 +79,7 @@ function train(opt)
          out = model:forward(input)
          f = f + criterion:forward(out,target)
          dfdo = criterion:backward(out,target)
-         model:backward(inputTable,dfdo)
+         model:backward(input,dfdo)
          opt.clipSize = 0.1
          --gradParam:clamp(-opt.clipSize,opt.clipSize)
          --Display input
@@ -90,17 +96,10 @@ function train(opt)
          return f, gradParam
       end
 
-      --Set learning rate
-      if math.fmod(t,20000) == 0 then
-        epoch = epoch + 1
-        eta = opt.eta*math.pow(0.5,epoch/50)
-        rmspropconf.learningRate = eta
-      end
-
-      _,fs = optim.adam(feval, param, rmspropconf)
+      _,fs = optim.adam(feval, param, optimState)
 
       err = err + fs[1]
-      if math.fmod(t,5) == 0 then      print('Error : ',err, 'iter size: ', t) end
+      if math.fmod(t,1) == 0 then      print('Error : ',err, 'iter size: ', t) end
    end
 
 end
