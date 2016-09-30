@@ -83,7 +83,7 @@ function train(opt)
          opt.clipSize = 0.1
          --gradParam:clamp(-opt.clipSize,opt.clipSize)
          --Display input
-         if true and math.fmod(t,20) == 0 then
+         if false and math.fmod(t,20) == 0 then
            _im1_ = image.display{image={ inputTable[#inputTable-4]:squeeze(),
                                          inputTable[#inputTable-3]:squeeze(),
                                          inputTable[#inputTable-2]:squeeze(),

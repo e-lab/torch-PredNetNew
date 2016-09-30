@@ -50,10 +50,8 @@ for L = nlayers, 1 , -1 do
       --Conv channels is 1 step forward since it starts from 1
       --Fill up input of LSTM channels
       inR = {upR,inputs[3*(L-1)+2]} - nn.JoinTable(1)
-      outLstm[L] = {inR, inputs[3*(L-1)+3],inputs[3*(L-1)+4]} - convlstm[L]
+      outR[L] = {inR, inputs[3*(L-1)+3],inputs[3*(L-1)+4]} - convlstm[L]
    end
-   outputs[4*(L-1)+2] = outLstm[L] - nn.SelectTable(1)
-   outputs[4*(L-1)+3] = outLstm[L] - nn.SelectTable(2)
 end
 --Down Up
 E = {}
@@ -81,23 +79,25 @@ for L = 1, nlayers do
    end
    --iR is already updated so we do second forloop
    print('I am in Down Top ',L)
-   iR = outLstm[L] - nn.SelectTable(2)
+   iR = outR[L] - nn.SelectTable(2)
    iR:annotate{graphAttributes = {color = 'blue', fontcolor = 'green'}}
    local P = iR - Ah - nn.ReLU()
    if L == 1 then
       outputs[4*(L-1)+4] = iR - Ah - nn.ReLU() -- this layer E
-      EN = {x, P} - nn.CSubTable(1)   -- PReLU instead of +/-ReLU
-      EP = {P, x} - nn.CSubTable(1)   -- PReLU instead of +/-ReLU
+      EN = {x, P} - nn.CSubTable(1) - nn.ReLU()  -- PReLU instead of +/-ReLU
+      EP = {P, x} - nn.CSubTable(1) - nn.ReLU()  -- PReLU instead of +/-ReLU
       outputs[4*(L-1)+1] = {EN, EP} - nn.JoinTable(1)  -- this layer E
    else
       outputs[4*(L-1)+4] = iR - Ah - nn.ReLU() -- this layer E
       EN = {A, P} - nn.CSubTable(1) -- PReLU instead of +/-ReLU
-      EN:annotate{graphAttributes = {color = 'red', fontcolor = 'green'}}
       EP = {P, A} - nn.CSubTable(1) -- PReLU instead of +/-ReLU
-      EP:annotate{graphAttributes = {color = 'red', fontcolor = 'blue'}}
       E[L]  = {EN, EP} - nn.JoinTable(1)
+      EN:annotate{graphAttributes = {color = 'red', fontcolor = 'green'}}
+      EP:annotate{graphAttributes = {color = 'red', fontcolor = 'blue'}}
       E[L]:annotate{graphAttributes = {color = 'blue', fontcolor = 'blue'}}
       outputs[4*(L-1)+1] = E[L]-- this layer E
+      outputs[4*(L-1)+2] = R[L] - nn.SelectTable(1)
+      outputs[4*(L-1)+3] = R[L] - nn.SelectTable(2)
    end
    -- set outputs:
 end
