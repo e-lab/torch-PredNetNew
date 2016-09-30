@@ -51,13 +51,13 @@ for i=1, opt.nSeq do
 end
 local inputs = {}
 local outputs = {}
-table.insert(inputs, xi)
 for L=1, opt.nlayers do
    table.insert(inputs, E0[L])
    table.insert(inputs, C0[L])
    table.insert(inputs, R0[L])
    table.insert(outputs, P[L])
 end
+table.insert(inputs, xi)
 if opt.nlayers > 1 then
    outputs = {outputs-nn.SelectTable(1)}
 end

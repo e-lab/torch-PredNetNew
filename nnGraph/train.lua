@@ -3,7 +3,7 @@ require 'optim'
 require 'image'
 require 'torch'
 require 'cutorch'
-require 'cudnn'
+--require 'cudnn'
 require 'cunn'
 function train(opt)
    imSize = opt.imSize
@@ -37,7 +37,6 @@ function train(opt)
       initState[3*(i-1)+3] = torch.Tensor(cellCh[i],imSize[i],imSize[i]):zero()
    end
    -- Init state for top LSTM
-   print('Test initState')
    if opt.gpu then
       for i, p in ipairs(initState) do
          initState[i] = p:cuda()
@@ -74,8 +73,8 @@ function train(opt)
          if opt.gpu then target = target:cuda() end
          -- test:
          local e,h,c,ht = {} ,{} ,{} ,{}
-         --print(inputTable)
-         input = {inputTable, unpack(initState)}
+         input = {unpack(initState)}
+         table.insert(input,inputTable)
          out = model:forward(input)
          f = f + criterion:forward(out,target)
          dfdo = criterion:backward(out,target)
