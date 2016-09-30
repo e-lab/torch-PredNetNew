@@ -6,7 +6,7 @@
 require 'nn'
 require 'nngraph'
 require 'ReLUX' -- rectified linear unit with saturation to 1
-require 'convLSTM'
+require 'ConvLSTM'
 local c = require 'trepl.colorize'
 
 
