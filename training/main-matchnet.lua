@@ -185,8 +185,7 @@ local function main()
       
       err = 0
       
-      local pic = { seqTable[#seqTable-4]:squeeze(),
-                    seqTable[#seqTable-3]:squeeze(),
+      local pic = { seqTable[#seqTable-3]:squeeze(),
                     seqTable[#seqTable-2]:squeeze(),
                     seqTable[#seqTable-1]:squeeze(),
                     seqTable[#seqTable]:squeeze(),
@@ -194,7 +193,7 @@ local function main()
                     output:squeeze() }
       if opt.display then
         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
-                            legend = 't-4, -3, -2, -2, t, Target, Output'}
+                            legend = 't-3, t-2, t-1, t, Target, Prediction'}
       end
     end
 
