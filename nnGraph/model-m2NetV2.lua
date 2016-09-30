@@ -1,26 +1,15 @@
 
 require 'models.m2NetV2'
 
-function createModel(opt, channels, clOpt)
+function createModel(opt, predNet)
 -- Option for main
-local input_stride = 1
-local poolsize = 2
-local inputImsize = 64
-local nlayers = opt.nlayers
-
-local imSize   ={64,32}
-local channels = {1, 32} -- layer maps sizes
-local prevE  = {channels[1]*2,channels[2]*2}
-local cellCh = {32,prevE[1]} --  Out put size of lstm -- This is same as output channels
-local lstmCh = {cellCh[2]+prevE[1],prevE[2]} --  Out put size of lstm -- last chnel has no R_l+1 concat
 -- create graph
-print('Creating model:')
-main  = mNet(nlayers,input_stride,poolsize,channels,clOpt)
+print('Creating connection and clonning:')
 
 -- clone model through time-steps:
 local clones = {}
 for i = 1, opt.nSeq do
-   clones[i] = main:clone('weight','bias','gradWeight','gradBias')
+   clones[i] = predNet:clone('weight','bias','gradWeight','gradBias')
 end
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
