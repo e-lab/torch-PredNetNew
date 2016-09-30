@@ -32,15 +32,17 @@ end
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-local E, R, E0, R0, tUnit, P, xii, uInputs
-E={} R={} E0={} R0={} P={}
+local E, C, H, E0, C0, H0, tUnit, P, xii, uInputs
+E={} C={} H={} E0={} C0={} H0={} P={}
 -- initialize inputs:
 local xi = nn.Identity()()
 for L=1, opt.nlayers do
    E0[L] = nn.Identity()()
-   R0[L] = nn.Identity()()
+   C0[L] = nn.Identity()()
+   H0[L] = nn.Identity()()
    E[L] = E0[L]
-   R[L] = R0[L]
+   C[L] = C0[L]
+   H[L] = H0[L]
 end
 -- create model as combination of units:
 for i=1, opt.nSeq do
@@ -50,17 +52,19 @@ for i=1, opt.nSeq do
    table.insert(uInputs, xii)
    for L=1, opt.nlayers do
       table.insert(uInputs, E[L])
-      table.insert(uInputs, R[L])
+      table.insert(uInputs, C[L])
+      table.insert(uInputs, H[L])
    end
    -- clones inputs = {input_sequence, E_layer_1, R_layer_1, E_layer_2, R_layer_2, ...}
    tUnit = clones[i] ({ table.unpack(uInputs) }) -- inputs applied to clones
    -- connect clones:
    for L=1, opt.nlayers do
       if i < opt.nSeq then
-         E[L] = { tUnit } - nn.SelectTable(3*L-2) -- connect output E to prev E of next clone
-         R[L] = { tUnit } - nn.SelectTable(3*L-1) -- connect output R to same layer E of next clone
+         E[L] = { tUnit } - nn.SelectTable(4*L-3) -- connect output E to prev E of next clone
+         C[L] = { tUnit } - nn.SelectTable(4*L-2) -- connect output R to same layer E of next clone
+         H[L] = { tUnit } - nn.SelectTable(4*L-1) -- connect output R to same layer E of next clone
       else
-         P[L] = { tUnit } - nn.SelectTable(3*L) -- select Ah output as output of network
+         P[L] = { tUnit } - nn.SelectTable(4*L) -- select Ah output as output of network
       end
    end
 end
@@ -68,7 +72,8 @@ local inputs = {}
 local outputs = {}
 for L=1, opt.nlayers do
    table.insert(inputs, E0[L])
-   table.insert(inputs, R0[L])
+   table.insert(inputs, C0[L])
+   table.insert(inputs, H0[L])
    table.insert(outputs, P[L])
 end
 table.insert(inputs, xi)
