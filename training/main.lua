@@ -59,8 +59,8 @@ local function main()
   local w, dE_dw
 
   -- cutorch.setDevice(1)
-  paths.dofile('data-mnist.lua')
-  paths.dofile('model-matchnet.lua')
+  paths.dofile('data.lua')
+  paths.dofile('model.lua')
   -- print('This is the model:', {model})
 
   -- send everything to GPU
@@ -82,7 +82,7 @@ local function main()
   end
 
   print('Loading training data...')
-  datasetSeq = getdataSeq_mnist(dataFile, opt.dataBig) -- we sample nSeq consecutive frames
+  datasetSeq = getdataSeq(dataFile, opt.dataBig) -- we sample nSeq consecutive frames
   print  ('Loaded ' .. datasetSeq:size() .. ' images')
 
   print('==> training model')

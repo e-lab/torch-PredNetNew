@@ -5,12 +5,11 @@
 
 require 'nn'
 require 'nngraph'
-require 'ReLUX' -- rectified linear unit with saturation to 1
-require 'ConvLSTM'
+require 'convLSTM'
 local c = require 'trepl.colorize'
 
 
-function mNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
+function MatchNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
    local pE, A, upR, C, H, Ah, E, R, cA, mA, cAh, up, op, convlstm
    E={} -- output from layers are saved to connect to next layer input
    C={} -- LSTM cell state
