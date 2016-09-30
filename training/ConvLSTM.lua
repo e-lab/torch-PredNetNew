@@ -1,189 +1,90 @@
---[[
-  Convolutional LSTM for short term visual cell
-  inputSize - number of input feature planes
-  outputSize - number of output feature planes
-  rho - recurrent sequence length
-  kc  - convolutional filter size to convolve input
-  km  - convolutional filter size to convolve cell; usually km > kc  
---]]
-local _ = require 'moses'
+-- First written by Sangpil Kim
+-- ConvLSTM with nngraph
+-- August 2016
+
 require 'nn'
-require 'dpnn'
-require 'rnn'
--- require 'extracunn'
+require 'nngraph'
 
-local backend_name = 'cudnn'
+local sc = nn.SpatialConvolution
+local scNB = nn.SpatialConvolution:noBias()
+local sg = nn.Sigmoid
 
-local backend
-if backend_name == 'cudnn' then
-  require 'cudnn'
-  backend = cudnn
-else
-  backend = nn
+function convLSTM(inDim, outDim, opt)
+  local dropout = opt.dropOut or 0
+  local kw, kh  = opt.kw, opt.kh
+  local stw, sth = opt.st, opt.st
+  local paw, pah = opt.pa, opt.pa
+  local n = opt.lm
+  -- Input  is 1+ 2*#Layer
+  -- Output is 1+ 2*#Layer
+  local inputs = {}
+  table.insert(inputs, nn.Identity()()) -- x
+  for L = 1,n do
+    table.insert(inputs, nn.Identity()()) -- prevC[L]
+    table.insert(inputs, nn.Identity()()) -- prevH[L]
+  end
+
+  local x
+  local outputs = {}
+  for L = 1,n do
+     -- Container for previous C and H
+    local prevH = inputs[L*2+1]
+    local prevC = inputs[L*2]
+    -- Setup input
+    if L == 1 then
+      x = inputs[1] --This form is from neuraltalk2
+    else
+    -- Prev hidden output
+      x = outputs[(L-1)*2]
+      if dropout > 0 then x = nn.Dropout(dropout)(x) end -- apply dropout, if any
+    end
+    -- In put convolution
+    local i2Ig, i2Fg, i2Og, i2It
+    if L == 1 then
+       i2Ig = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Ig_'..L}
+       i2Fg = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Fg_'..L}
+       i2Og = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Og_'..L}
+       i2It = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2It_'..L}
+    else
+       i2Ig = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Ig_'..L}
+       i2Fg = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Fg_'..L}
+       i2Og = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2Og_'..L}
+       i2It = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2It_'..L}
+    end
+
+    local h2Ig = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{name='h2Ig_'..L}
+    local h2Fg = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{name='h2Fg_'..L}
+    local h2Og = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevC):annotate{name='h2Og_'..L}
+    local h2It = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevC):annotate{name='h2It_'..L}
+
+    local ig = nn.CAddTable()({i2Ig, h2Ig})
+    local fg = nn.CAddTable()({i2Fg, h2Fg})
+    local og = nn.CAddTable()({i2Og, h2Og})
+    local it = nn.CAddTable()({i2It, h2It})
+
+    -- Gates calculation
+    local inGate = sg()(ig)
+    local fgGate = sg()(fg)
+    local ouGate = sg()(og)
+    local inTanh = nn.Tanh()(it)
+    -- perform the LSTM update
+    local nextC = nn.CAddTable()({
+        nn.CMulTable()({fgGate, prevC}),
+        nn.CMulTable()({inGate, inTanh})
+      })
+    -- gated cells form the output
+    local out = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
+
+    table.insert(outputs, nextC)
+   --Apply dropout
+   if dropout > 0 then out = nn.Dropout(dropout)(nextH):annotate{name='drop_final'} end
+    table.insert(outputs, out)
+  end
+
+  -- Get last output
+  local lastH = outputs[#outputs]
+
+  return nn.gModule(inputs, outputs)
 end
 
-local ConvLSTM, parent = torch.class('nn.ConvLSTM', 'nn.LSTM')
 
-function ConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride, batchSize)
-   self.kc = kc
-   self.km = km
-   self.padc = torch.floor(kc/2)
-   self.padm = torch.floor(km/2)
-   self.stride = stride or 1
-   self.batchSize = batchSize or nil
-   parent.__init(self, inputSize, outputSize, rho or 10)
-end
-
--------------------------- factory methods -----------------------------
-function ConvLSTM:buildGate()
-   -- Note : Input is : {input(t), output(t-1), cell(t-1)}
-   local gate = nn.Sequential()
-   gate:add(nn.NarrowTable(1,2)) -- we don't need cell here
-   local input2gate = backend.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc)
-   local output2gate = nn.SpatialConvolution(self.outputSize, self.outputSize, self.km, self.km, self.stride, self.stride, self.padm, self.padm):noBias()
-   local para = nn.ParallelTable()
-   para:add(input2gate):add(output2gate) 
-   gate:add(para)
-   gate:add(nn.CAddTable())
-   gate:add(backend.Sigmoid())
-   return gate
-end
-
-function ConvLSTM:buildInputGate()
-   self.inputGate = self:buildGate()
-   return self.inputGate
-end
-
-function ConvLSTM:buildForgetGate()
-   self.forgetGate = self:buildGate()
-   return self.forgetGate
-end
-
-function ConvLSTM:buildcellGate()
-   -- Input is : {input(t), output(t-1), cell(t-1)}, but we only need {input(t), output(t-1)}
-   local hidden = nn.Sequential()
-   hidden:add(nn.NarrowTable(1,2))
-   local input2gate = backend.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc)
-   local output2gate = nn.SpatialConvolution(self.outputSize, self.outputSize, self.km, self.km, self.stride, self.stride, self.padm, self.padm):noBias()
-   local para = nn.ParallelTable()
-   para:add(input2gate):add(output2gate)
-   hidden:add(para)
-   hidden:add(nn.CAddTable())
-   hidden:add(backend.Tanh())
-   self.cellGate = hidden
-   return hidden
-end
-
-function ConvLSTM:buildcell()
-   -- Input is : {input(t), output(t-1), cell(t-1)}
-   self.inputGate = self:buildInputGate() 
-   self.forgetGate = self:buildForgetGate()
-   self.cellGate = self:buildcellGate()
-   -- forget = forgetGate{input, output(t-1), cell(t-1)} * cell(t-1)
-   local forget = nn.Sequential()
-   local concat = nn.ConcatTable()
-   concat:add(self.forgetGate):add(nn.SelectTable(3))
-   forget:add(concat)
-   forget:add(nn.CMulTable())
-   -- input = inputGate{input(t), output(t-1), cell(t-1)} * cellGate{input(t), output(t-1), cell(t-1)}
-   local input = nn.Sequential()
-   local concat2 = nn.ConcatTable()
-   concat2:add(self.inputGate):add(self.cellGate)
-   input:add(concat2)
-   input:add(nn.CMulTable())
-   -- cell(t) = forget + input
-   local cell = nn.Sequential()
-   local concat3 = nn.ConcatTable()
-   concat3:add(forget):add(input)
-   cell:add(concat3)
-   cell:add(nn.CAddTable())
-   self.cell = cell
-   return cell
-end   
-   
-function ConvLSTM:buildOutputGate()
-   self.outputGate = self:buildGate()
-   return self.outputGate
-end
-
--- cell(t) = cell{input, output(t-1), cell(t-1)}
--- output(t) = outputGate{input, output(t-1)}*tanh(cell(t))
--- output of Model is table : {output(t), cell(t)} 
-function ConvLSTM:buildModel()
-   -- Input is : {input(t), output(t-1), cell(t-1)}
-   self.cell = self:buildcell()
-   self.outputGate = self:buildOutputGate()
-   -- assemble
-   local concat = nn.ConcatTable()
-   concat:add(nn.NarrowTable(1,2)):add(self.cell)
-   local model = nn.Sequential()
-   model:add(concat)
-   -- output of concat is {{input(t), output(t-1)}, cell(t)}, 
-   -- so flatten to {input(t), output(t-1), cell(t)}
-   model:add(nn.FlattenTable())
-   local cellAct = nn.Sequential()
-   cellAct:add(nn.SelectTable(3))
-   cellAct:add(backend.Tanh())
-   local concat3 = nn.ConcatTable()
-   concat3:add(self.outputGate):add(cellAct)
-   local output = nn.Sequential()
-   output:add(concat3)
-   output:add(nn.CMulTable())
-   -- we want the model to output : {output(t), cell(t)}
-   local concat4 = nn.ConcatTable()
-   concat4:add(output):add(nn.SelectTable(3))
-   model:add(concat4)
-   return model
-end
-
-function ConvLSTM:updateOutput(input)
-   local prevOutput, prevCell
-   
-   if self.step == 1 then
-      prevOutput = self.userPrevOutput or self.zeroTensor
-      prevCell = self.userPrevCell or self.zeroTensor
-      if self.batchSize then
-         self.zeroTensor:resize(self.batchSize,self.outputSize,input:size(3),input:size(4)):zero()
-      else
-         self.zeroTensor:resize(self.outputSize,input:size(2),input:size(3)):zero()
-      end
-   else
-      -- previous output and memory of this module
-      prevOutput = self.output
-      prevCell   = self.cell
-   end
-      
-   -- output(t), cell(t) = lstm{input(t), output(t-1), cell(t-1)}
-   local output, cell
-   if self.train ~= false then
-      self:recycle()
-      local recurrentModule = self:getStepModule(self.step)
-      -- the actual forward propagation
-      output, cell = unpack(recurrentModule:updateOutput{input, prevOutput, prevCell})
-   else
-      output, cell = unpack(self.recurrentModule:updateOutput{input, prevOutput, prevCell})
-   end
-   
-   self.outputs[self.step] = output
-   self.cells[self.step] = cell
-   
-   self.output = output
-   self.cell = cell
-   
-   self.step = self.step + 1
-   self.gradPrevOutput = nil
-   self.updateGradInputStep = nil
-   self.accGradParametersStep = nil
-   self.gradParametersAccumulated = false
-   -- note that we don't return the cell, just the output
-   return self.output
-end
-
-function ConvLSTM:initBias(forgetBias, otherBias)
-  local fBias = forgetBias or 1
-  local oBias = otherBias or 0
-  self.inputGate.modules[2].modules[1].bias:fill(oBias)
-  self.outputGate.modules[2].modules[1].bias:fill(oBias)
-  self.cellGate.modules[2].modules[1].bias:fill(oBias)
-  self.forgetGate.modules[2].modules[1].bias:fill(fBias)
-end
