@@ -8,4 +8,5 @@ To run:
 ## to train MatchNet:
 
 3: run: ```qlua main.lua -useGPU -dataBig -nlayers 3 -display -save -savePics```
+   run: ```th main.lua   -useGPU -dataBig -nlayers 3 ```
 

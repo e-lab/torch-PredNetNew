@@ -10,7 +10,6 @@ require 'paths'
 require 'torch'
 require 'image'
 require 'optim'
-require 'env'
 require 'pl'
 
 lapp = require 'pl.lapp'
@@ -22,14 +21,14 @@ opt = lapp [[
 
   Data parameters:
   --dataBig                                use large dataset or reduced one
-  
+
   Training parameters:
   -r,--learningRate       (default 0.001)  learning rate
   -d,--learningRateDecay  (default 0)      learning rate decay
   -w,--weightDecay        (default 0)      L2 penalty on the weights
   -m,--momentum           (default 0.9)    momentum parameter
   --maxEpochs             (default 10)     max number of training epochs
-  
+
   Model parameters:
   --nlayers               (default 2)     number of layers of MatchNet
   --lstmLayers            (default 1)     number of layers of ConvLSTM
@@ -47,7 +46,13 @@ opt = lapp [[
   --savePics                              save output images examples
 ]]
 
-opt.nFilters  = {1,32,64,128} -- number of filters in the encoding/decoding layers
+for i =1 , opt.nlayers do
+   if i == 1 then
+      opt.nFilters  = {1} -- number of filters in the encoding/decoding layers
+   else
+      table.insert(opt.nFilters, (i-1)*32)
+   end
+end
 
 torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(opt.seed)
@@ -92,17 +97,17 @@ local function main()
 
   local err = 0
   local epoch = 1
- 
+
   local optimState = {
     learningRate = opt.learningRate,
     momentum = opt.momentum,
     learningRateDecay = opt.learningRateDecay
   }
-  
+
   model:training()
 
   -- set training iterations and epochs according to dataset size:
-  opt.dataEpoch = datasetSeq:size() 
+  opt.dataEpoch = datasetSeq:size()
   opt.maxIter = opt.dataEpoch * opt.maxEpochs
 
   -- train:
@@ -111,7 +116,7 @@ local function main()
     -- define eval closure
     local eval_E = function(w)
       local f = 0
- 
+
       model:zeroGradParameters()
 
       -- reset initial network state:
@@ -134,18 +139,18 @@ local function main()
       sample = datasetSeq[t]
       data = sample[1]
       for i = 1, data:size(1)-1 do
-        if opt.useGPU then 
+        if opt.useGPU then
           table.insert(seqTable, data[i]:cuda())
         else
           table.insert(seqTable, data[i]) -- use CPU
-        end 
+        end
       end
       target:resizeAs(data[1]):copy(data[data:size(1)])
       if opt.useGPU then target = target:cuda() end
-      
+
       -- prepare table of states and input:
       table.insert(inTableG0, seqTable)
-      
+
       -- estimate f and gradients
       output = model:forward(inTableG0)
       f = f + criterion:forward(output, target)
@@ -156,14 +161,14 @@ local function main()
       -- return f and df/dX
       return f, dE_dw
     end
-   
+
     if math.fmod(t, opt.dataEpoch) == 0 then
       epoch = epoch + 1
       print('Training epoch #', epoch)
       opt.learningRate = opt.learningRate * 1/2
-      optimState.learningRate = opt.learningRate  
+      optimState.learningRate = opt.learningRate
     end
-    
+
     _,fs = optim.adam(eval_E, w, optimState)
 
     err = err + fs[1]
@@ -172,9 +177,9 @@ local function main()
     -- compute statistics / report error
     if math.fmod(t, opt.nSeq) == 1 then
       print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..opt.learningRate )
-      
+
       err = 0
-      
+
       local pic = { seqTable[#seqTable-3]:squeeze(),
                     seqTable[#seqTable-2]:squeeze(),
                     seqTable[#seqTable-1]:squeeze(),
@@ -182,7 +187,8 @@ local function main()
                     target:squeeze(),
                     output:squeeze() }
       if opt.display then
-        _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7, 
+         require 'env'
+        _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
                             legend = 't-3, t-2, t-1, t, Target, Prediction'}
       end
     end
@@ -196,7 +202,7 @@ local function main()
       torch.save(opt.savedir .. '/model_' .. t .. '.net', model)
       torch.save(opt.savedir .. '/optimState_' .. t .. '.t7', optimState)
     end
-  
+
   end
   print ('Training completed!')
   collectgarbage()
