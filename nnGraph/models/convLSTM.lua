@@ -1,16 +1,29 @@
 -- First written by Sangpil Kim
+<<<<<<< HEAD:nnGraph/models/convLSTM.lua
+=======
 -- Notation is from https://github.com/oxford-cs-ml-2015/practical6/blob/master/LSTM.lua
+>>>>>>> e7f2ae3def75dd48d6a8634baa30e2473d34a996:lstmBasic/convLSTM.lua
 -- ConvLSTM with nngraph
 -- August 2016
 
 require 'nn'
 require 'nngraph'
 
+<<<<<<< HEAD:nnGraph/models/convLSTM.lua
+-- Set up backend
+local backend = nn
+local sc = backend.SpatialConvolution
+local scNB = backend.SpatialConvolution:noBias()
+local sg = backend.Sigmoid
+
+function lstm(inDim, outDim, opt)
+=======
 local sc = nn.SpatialConvolution
 local scNB = nn.SpatialConvolution:noBias()
 local sg = nn.Sigmoid
 
 function convLSTM(inDim, outDim, opt)
+>>>>>>> e7f2ae3def75dd48d6a8634baa30e2473d34a996:lstmBasic/convLSTM.lua
   local dropout = opt.dropOut or 0
   local kw, kh  = opt.kw, opt.kh
   local stw, sth = opt.st, opt.st
@@ -31,12 +44,22 @@ function convLSTM(inDim, outDim, opt)
      -- Container for previous C and H
     local prevH = inputs[L*2+1]
     local prevC = inputs[L*2]
+<<<<<<< HEAD:nnGraph/models/convLSTM.lua
+    -- Setup input
+    if L == 1 then
+      x = inputs[1] --This form is from neuraltalk2
+    else
+    -- Prev hidden output
+      x = outputs[(L-1)*2]
+      if dropout > 0 then x = nn.Dropout(dropout)(x) end -- apply dropout, if any
+=======
     -- Get input
     if L == 1 then
       x = inputs[1]
     else
     -- Get x from bottom layer as input
       x = outputs[(L-1)*2]
+>>>>>>> e7f2ae3def75dd48d6a8634baa30e2473d34a996:lstmBasic/convLSTM.lua
     end
     --Convolutions
     local i2Ig, i2Fg, i2Og, i2It
@@ -66,18 +89,33 @@ function convLSTM(inDim, outDim, opt)
     local inGate = sg()(ig)
     local fgGate = sg()(fg)
     local ouGate = sg()(og)
+<<<<<<< HEAD:nnGraph/models/convLSTM.lua
+    local inTanh = backend.Tanh()(it)
+    -- perform the LSTM update
+    local nextC           = nn.CAddTable()({
+=======
     local inTanh = nn.Tanh()(it)
     -- Calculate Cell state
     local nextC = nn.CAddTable()({
+>>>>>>> e7f2ae3def75dd48d6a8634baa30e2473d34a996:lstmBasic/convLSTM.lua
         nn.CMulTable()({fgGate, prevC}),
         nn.CMulTable()({inGate, inTanh})
       })
+<<<<<<< HEAD:nnGraph/models/convLSTM.lua
+    -- gated cells form the output
+    local out = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
+
+    table.insert(outputs, nextC)
+   --Apply dropout
+   if dropout > 0 then out = nn.Dropout(dropout)(nextH):annotate{name='drop_final'} end
+=======
     -- Calculate output
     local out = nn.CMulTable()({ouGate, nn.Tanh()(nextC)})
 
     table.insert(outputs, nextC)
    -- Dropout if neccessary
    if dropout > 0 then out = nn.Dropout(dropout)(nextH) end
+>>>>>>> e7f2ae3def75dd48d6a8634baa30e2473d34a996:lstmBasic/convLSTM.lua
     table.insert(outputs, out)
   end
 

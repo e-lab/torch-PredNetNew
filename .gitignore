@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 *.DS_Store
 *.swp
+*.swo
 *.t7
 *.dot
 *.svg
 *.jpg
 *.jpg
 *.net
-=======
-*.swp
-*.svg
-*.dot
->>>>>>> split model and train file
