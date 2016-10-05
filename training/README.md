@@ -7,5 +7,5 @@ To run:
 
 ## to train MatchNet:
 
-3: run: ```qlua main-matchnet.lua --nlayers 3``` to train with 2 layers (1-4 layer possible)
+3: run: ```qlua main.lua -useGPU -dataBig -nlayers 3 -display -save -savePics```
 

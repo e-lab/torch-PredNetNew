@@ -2,7 +2,7 @@
 -- August 2016
 -- MatchNet: a model of PredNet from: https://arxiv.org/abs/1605.08104
 
-require 'MatchNet-LSTM'
+require 'matchnet'
 local c = require 'trepl.colorize'
 
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -26,7 +26,7 @@ clOpt['lm'] = 1
 
 -- instantiate MatchNet:
 print('Creating model')
-local model = mNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, true)
+local model = MatchNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, true)
 -- print({model})
 -- print(model:parameters())
 

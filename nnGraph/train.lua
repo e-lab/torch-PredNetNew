@@ -31,7 +31,7 @@ function train(opt)
    print('==> training model')
    target  = torch.Tensor()--= torch.Tensor(opt.transf,opt.memorySizeH, opt.memorySizeW)
    local initState = {}
-   for i = nlayers , 1, -1 do
+   for i = opt.nlayers , 1, -1 do
       initState[3*(i-1)+1] = torch.Tensor(prevE[i],imSize[i],imSize[i]):zero()
       initState[3*(i-1)+2] = torch.Tensor(cellCh[i],imSize[i],imSize[i]):zero()
       initState[3*(i-1)+3] = torch.Tensor(cellCh[i],imSize[i],imSize[i]):zero()
@@ -64,7 +64,8 @@ function train(opt)
          sample = datasetSeq[t]
          frames = sample[1]
          inputTable ={}
-         for i = 1,frames:size(1)-1 do
+         --for i = 1,frames:size(1)-1 do
+         for i = 1,1 do
            table.insert(inputTable, frames[i]:cuda())
          end
 

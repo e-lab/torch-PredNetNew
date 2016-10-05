@@ -1,4 +1,8 @@
-function getdataSeq_mnist(datafile, big)
+-- dataset and data code inspired by: https://github.com/viorik/ConvLSTM
+-- uses moving MNIST numbers to create a video animation and fixed lines to debug
+-------------------------------------------------------------------------------
+
+function getdataSeq(datafile, big)
    
    local data 
    data = torch.load(datafile) -- if dataset in binary format

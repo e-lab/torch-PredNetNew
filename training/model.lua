@@ -5,7 +5,7 @@
 --
 
 require 'nn'
-require 'MatchNet-LSTM'
+require 'matchnet'
 -- nngraph.setDebug(true)
 
 local clOpt = {}
@@ -18,7 +18,7 @@ clOpt['dropOut'] = 0
 clOpt['lm'] = opt.lstmLayers
 
 -- instantiate MatchNet:
-local unit = mNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, false) -- false testing mode
+local unit = MatchNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, false) -- false testing mode
 -- nngraph.annotateNodes()
 -- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
