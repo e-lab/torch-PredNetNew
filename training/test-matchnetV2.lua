@@ -16,7 +16,7 @@ opt.stride = 1
 opt.poolsize = 2
 opt.nFilters = {1}
 for i = 2 , opt.nlayers do
-   table.insert(opt.nFilters, (i-1)*32)
+   table.insert(opt.nFilters, 32)
 end
 print(opt.nFilters)
 local clOpt = {}
