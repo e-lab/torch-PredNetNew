@@ -7,21 +7,34 @@ require 'nngraph'
 local RNN = require 'RNN'
 
 --[[
-                     Rl+1
-                       |
-                    Rl V
-                +-------------+
-                |             |El
-  El[t-1]------>|             |------> Al+1 / Rl[t+1]
-              Rl|             |
-                |    BLOCK    |
-                |             |Al
-  Rl[t-1]------>|             |<------ A1 / El-1
-              Rl|             |
-                +------+------+
-                       | Rl
-                       V
-                     Rl-1
+
+                 Rl+1[t]
+                   |
+                   |
+                   V
+               +-------+
+               |       |
+    Rl[t-1]--->| Rl[t] |<---El[t-1]
+               |       |
+               +-------+     +-------------------------------+
+                   |         |        Block (Layer: l)       |
+                   |         |        ================       |
+                   |         |    +------+                   |
+                   |         |    | ^    |                   |
+                   +------------->| A[t] |--+                |
+              Rl[t]          |    |      |  |                |
+                             |    +------+  |    +------+    |
+                             |              +--->|      |    |
+                             |                   | E[t] |---------->El[t]
+                             |              +--->|      |    |
+                             |    +------+  |    +------+    |
+                             |    |      |  |                |
+        Img/El-1[t]-------------->| A[t] |--+                |
+                             |    |      |                   |
+                             |    +------+                   |
+                             |                               |
+                             +-------------------------------+
+
 --]]
 
 function prednet:__init(opt)
@@ -77,9 +90,9 @@ local function block(l, L, iChannel, oChannel)
                             fillcolor = 'skyblue'}}
    end
 
-   -- Input for R:   Rl+1,  Rl[t-1],  El[t-1]
+   -- Get Rl
    local R = inputs[2]
-   --                       R channel
+
    -- Predicted A
    local nodeAh = nn.Sequential()
    local Ah = (R:annotate{name = 'R' .. layer, graphAttributes = {
@@ -102,7 +115,7 @@ local function block(l, L, iChannel, oChannel)
    -- This El will be used by Al+1
    outputs[1] = E
 
-   -- XXX Ah1 ignored for now
+   -- TODO Ah1 ignored for now
    -- if l == 1 then
    --    -- For first layer return Ah for viewing
    --    table.insert(outputs, nn.Identity()())
@@ -113,11 +126,6 @@ local function block(l, L, iChannel, oChannel)
 end
 
 function prednet:getModel()
-   local inputs = {}
-   local outputs = {}
-
-   local L = self.layers
-   local seq = self.seq
    --[[
        L -> Total number of layers
        Input and outputs in time series
@@ -130,6 +138,12 @@ function prednet:getModel()
       Outputs: Ah1, Rl, El
                Total = 2L+1
    --]]
+
+   local inputs = {}
+   local outputs = {}
+
+   local L = self.layers
+   local seq = self.seq
 
    -- Create input and output containers for nngraph gModule for TIME SERIES
    for i = 1, (2*L+1) do
@@ -173,7 +187,7 @@ function prednet:getModel()
 
       local A
 
-      -- XXX
+      -- TODO
       -- if l == 1 then                     -- img,       Rl
       --    {outputs[2*l+1], outputs[1]} = {inputs[1], outputs[2*l]}
       --                                   - block(l, L, iChannel, oChannel)
@@ -186,30 +200,7 @@ function prednet:getModel()
       -- end
    end
 
-   local g = nn.gModule(inputs, outputs)
-
-   local x = {}
-   local res = self.res
-
-   x[1] = torch.Tensor(self.channels[1][2], res, res)          -- Image
-   x[2] = torch.Tensor(2*self.channels[1][2], res, res)        -- R1[0]
-   x[3] = torch.Tensor(2*self.channels[1][2], res, res)        -- E1[0]
-
-   for l = 2, L do
-      res = res / 2
-      x[2*l]   = torch.Tensor(2*self.channels[l][2], res, res) -- Rl[0]
-      x[2*l+1] = torch.Tensor(2*self.channels[l][2], res, res) -- El[0]
-   end
-   res = res / 2
-   x[2*(L+1)] = torch.Tensor(2*self.channels[L+1][2], res, res)    -- RL+1
-
-   local o = g:forward(x)
-   graph.dot(g.fg, 'PredNet Model', 'graphs/prednet')
-   local clones = {}
-   for i = 1, seq do
-      clones[i] = 'Duhh! Put your model here'
-   end
-
+   return nn.gModule(inputs, outputs)
 end
 
 return prednet
