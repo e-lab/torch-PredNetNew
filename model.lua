@@ -54,7 +54,6 @@ local SC = nn.SpatialConvolution
 
 local function block(l, L, iChannel, oChannel)
    local inputs = {}
-   local outputs = {}
 
    --[[
        Input and outputs of ONE BLOCK
@@ -70,8 +69,6 @@ local function block(l, L, iChannel, oChannel)
    -- Create input and output containers for nngraph gModule for ONE block
    table.insert(inputs, nn.Identity()())         -- A1 / El-1
    table.insert(inputs, nn.Identity()())         -- Rl
-
-   table.insert(outputs, nn.Identity()())        -- El
 
    local A
    local layer = tostring(l)
@@ -112,20 +109,11 @@ local function block(l, L, iChannel, oChannel)
                          style = 'filled',
                          fillcolor = 'lightpink'}}
 
-   -- This El will be used by Al+1
-   -- outputs[1] = E
-
-   -- TODO Ah1 ignored for now
    if l == 1 then
-      -- For first layer return Ah for viewing
-      -- table.insert(outputs, nn.Identity()())
-      -- outputs[2] = Ah
       return nn.gModule(inputs , {E, Ah})
    else
       return nn.gModule(inputs, {E})
    end
-
-   -- return nn.gModule(inputs, outputs)
 end
 
 local function stackBlocks(L, seq, channels)
