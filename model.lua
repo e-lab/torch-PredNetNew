@@ -113,19 +113,22 @@ local function block(l, L, iChannel, oChannel)
                          fillcolor = 'lightpink'}}
 
    -- This El will be used by Al+1
-   outputs[1] = E
+   -- outputs[1] = E
 
    -- TODO Ah1 ignored for now
-   -- if l == 1 then
-   --    -- For first layer return Ah for viewing
-   --    table.insert(outputs, nn.Identity()())
-   --    outputs[2] = Ah
-   -- end
+   if l == 1 then
+      -- For first layer return Ah for viewing
+      -- table.insert(outputs, nn.Identity()())
+      -- outputs[2] = Ah
+      return nn.gModule(inputs , {E, Ah})
+   else
+      return nn.gModule(inputs, {E})
+   end
 
-   return nn.gModule(inputs, outputs)
+   -- return nn.gModule(inputs, outputs)
 end
 
-function prednet:getModel()
+local function stackBlocks(L, seq, channels)
    --[[
        L -> Total number of layers
        Input and outputs in time series
@@ -142,9 +145,6 @@ function prednet:getModel()
    local inputs = {}
    local outputs = {}
 
-   local L = self.layers
-   local seq = self.seq
-
    -- Create input and output containers for nngraph gModule for TIME SERIES
    for i = 1, (2*L+1) do
       table.insert(inputs, nn.Identity()())
@@ -155,23 +155,23 @@ function prednet:getModel()
 --------------------------------------------------------------------------------
 -- Get Rl
 --------------------------------------------------------------------------------
-   local Rl_1Channel = 2*self.channels[L+1][2]
-   local iChannel    = self.channels[L][1]
-   local oChannel    = self.channels[L][2]
+   local Rl_1Channel = 2*channels[L+1][2]
+   local iChannel    = channels[L][1]
+   local oChannel    = channels[L][2]
    -- Calculate Rl+1 -> Rl -> Rl-1
    outputs[2*L] = ({inputs[2*(L+1)], inputs[2*L], inputs[2*L+1]}
                   - RNN.getModel(2*oChannel, Rl_1Channel))
-                   :annotate{name = 'R' .. tostring(L), graphAttributes = {
+                   :annotate{name = 'R: ' .. tostring(L), graphAttributes = {
                              color = 'blue',
                              fontcolor = 'blue'}}
    for l = L-1, 1, -1 do
-      Rl_1Channel = 2*self.channels[l+1][2]
-      iChannel    = self.channels[l][1]
-      oChannel    = self.channels[l][2]
+      Rl_1Channel = 2*channels[l+1][2]
+      iChannel    = channels[l][1]
+      oChannel    = channels[l][2]
       -- Input for R:             Rl+1,     Rl[t-1],       El[t-1]
       outputs[2*l] = ({outputs[2*(l+1)], inputs[2*l], inputs[2*l+1]}
                      - RNN.getModel(2*oChannel, Rl_1Channel))
-                      :annotate{name = 'R' .. tostring(l), graphAttributes = {
+                      :annotate{name = 'R: ' .. tostring(l), graphAttributes = {
                                 color = 'blue',
                                 fontcolor = 'blue'}}
    end
@@ -179,28 +179,59 @@ function prednet:getModel()
 --------------------------------------------------------------------------------
 -- Stack blocks to form the model for time t
 --------------------------------------------------------------------------------
-   -- XXX
-   outputs[1] = inputs[1]
    for l = 1, L do
-      iChannel = self.channels[l][1]
-      oChannel = self.channels[l][2]
+      iChannel = channels[l][1]
+      oChannel = channels[l][2]
 
-      local A
-
-      -- TODO
-      -- if l == 1 then                     -- img,       Rl
-      --    {outputs[2*l+1], outputs[1]} = {inputs[1], outputs[2*l]}
-      --                                   - block(l, L, iChannel, oChannel)
-      -- else                 -- El-1,             Rl
-         outputs[2*l+1] = ({outputs[2*l-1], outputs[2*l]}
-                          - block(l, L, iChannel, oChannel))
-                           :annotate{name = 'Block' .. tostring(l), graphAttributes = {
+      if l == 1 then          -- First layer block has E and Ah as output
+         --                img,         Rl
+         local E_Ah = ({inputs[1], outputs[2*l]}
+                      - block(l, L, iChannel, oChannel))
+                       :annotate{name = '{E / Ah}: ' .. tostring(l), graphAttributes = {
                                      style = 'filled',
                                      fillcolor = 'lightpink'}}
-      -- end
+                              -- img,       Rl
+         local E, Ah = E_Ah:split(2)
+         outputs[2*l+1] = E:annotate{name = 'E: ' .. tostring(l), graphAttributes = {
+                                     style = 'filled',
+                                     fillcolor = 'hotpink'}}
+         outputs[1] = Ah:annotate{name = 'Prediction', graphAttributes = {
+                                     style = 'filled',
+                                     fillcolor = 'seagreen1'}}
+      else                    -- Rest of the blocks have only E as output
+                              -- El-1,           Rl
+         outputs[2*l+1] = ({outputs[2*l-1], outputs[2*l]}
+                          - block(l, L, iChannel, oChannel))
+                           :annotate{name = 'E: ' .. tostring(l), graphAttributes = {
+                                     style = 'filled',
+                                     fillcolor = 'lightpink'}}
+      end
    end
 
    return nn.gModule(inputs, outputs)
+end
+
+function prednet:getModel()
+   local g = stackBlocks(self.layers, self.seq, self.channels)
+
+   local x = {}
+   local res = self.res
+   local L = self.layers
+
+   x[1] = torch.Tensor(self.channels[1][2], res, res)          -- Image
+   x[2] = torch.Tensor(2*self.channels[1][2], res, res)        -- R1[0]
+   x[3] = torch.Tensor(2*self.channels[1][2], res, res)        -- E1[0]
+
+   for l = 2, L do
+      res = res / 2
+      x[2*l]   = torch.Tensor(2*self.channels[l][2], res, res) -- Rl[0]
+      x[2*l+1] = torch.Tensor(2*self.channels[l][2], res, res) -- El[0]
+   end
+   res = res / 2
+   x[2*(L+1)] = torch.Tensor(2*self.channels[L+1][2], res, res)    -- RL+1
+
+   local o = g:forward(x)
+   graph.dot(g.fg, 'PredNet Model', 'graphs/prednet')
 end
 
 return prednet
