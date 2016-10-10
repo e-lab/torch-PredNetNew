@@ -44,7 +44,6 @@ function RNN.getModel(channelRl, channelRl_1)
    local n = nn.Sequential()
    local m = nn.ParallelTable()
    -- Conv(Rl+1)
-   -- XXX Use Upsampling here
    m:add(nn.SpatialFullConvolution
         (channelRl_1, channelRl, 3, 3, 2, 2, 1, 1, 1, 1))
 

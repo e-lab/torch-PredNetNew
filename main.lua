@@ -9,13 +9,14 @@ require 'nngraph'
 torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(9)
 
-local model = require 'model'
+local opts = require 'opts'
+local prednet = require 'prednet'
 
-local opt = {}
-opt.layers = 3
-opt.seq = 1
+-- Gather all the arguments
+local opt = opts.parse(arg)
 opt.res = 64
 
-model:__init(opt)
-
 local g = model:getModel()
+prednet:__init(opt)
+
+prednet:getModel()
