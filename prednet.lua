@@ -6,6 +6,50 @@ require 'nngraph'
 -- included local packages
 local RNN = require 'RNN'
 
+function prednet:__init(opt)
+   -- Input/Output channels for A of every layer
+   self.channels = torch.Tensor({{  1,   1},
+                                 {  2,  32},
+                                 { 64,  64},
+                                 {128, 128},
+                                 {256, 256}})
+   self.layers = opt.layers
+   self.seq = opt.seq
+   self.res = opt.res
+   self.vis = opt.vis
+end
+
+-- Macros
+local SC = nn.SpatialConvolution
+local gaA  = {color = 'blue', fontcolor = 'blue'}
+local gaAh = {style = 'filled', fillcolor = 'skyblue'}
+local gaE  = {style = 'filled', fillcolor = 'lightpink'}
+local gaR  = {style = 'filled', fillcolor = 'springgreen'}
+
+-- This function is used if you want to save the graphs
+local function getInput(seq, res, L, channels, mode)
+   -- Input for the gModule
+   local x = {}
+
+   if mode == 1 then
+      x[1] = torch.Tensor(channels[1][2], res, res)            -- Image
+   elseif mode == 2 then
+      x[1] = torch.Tensor(seq, channels[1][2], res, res)       -- Image
+   end
+   x[3] = torch.zeros(2*channels[1][2], res, res)              -- R1[0]
+   x[4] = torch.zeros(2*channels[1][2], res, res)              -- E1[0]
+
+   for l = 2, L do
+      res = res / 2
+      x[2*l+1] = torch.zeros(2*channels[l][2], res, res)       -- Rl[0]
+      x[2*l+2] = torch.zeros(2*channels[l][2], res, res)       -- El[0]
+   end
+   res = res / 2
+   x[2] = torch.zeros(2*channels[L+1][2], res, res)            -- RL+1
+
+   return x
+end
+
 --[[
 
                  Rl+1[t]
@@ -37,46 +81,6 @@ local RNN = require 'RNN'
 
 --]]
 
-function prednet:__init(opt)
-   -- Input/Output channels for A of every layer
-   self.channels = torch.Tensor({{  1,   1},
-                                 {  2,  32},
-                                 { 64,  64},
-                                 {128, 128},
-                                 {256, 256}})
-   self.layers = opt.layers
-   self.seq = opt.seq
-   self.res = opt.res
-   self.vis = opt.vis
-end
-
--- Macros
-local SC = nn.SpatialConvolution
-
--- This function is used if you want to save the graphs
-local function getInput(seq, res, L, channels, mode)
-   -- Input for the gModule
-   local x = {}
-
-   if mode == 1 then
-      x[1] = torch.Tensor(channels[1][2], res, res)            -- Image
-   elseif mode == 2 then
-      x[1] = torch.Tensor(seq, channels[1][2], res, res)       -- Image
-   end
-   x[3] = torch.zeros(2*channels[1][2], res, res)              -- R1[0]
-   x[4] = torch.zeros(2*channels[1][2], res, res)              -- E1[0]
-
-   for l = 2, L do
-      res = res / 2
-      x[2*l+1]   = torch.zeros(2*channels[l][2], res, res)     -- Rl[0]
-      x[2*l+2] = torch.zeros(2*channels[l][2], res, res)       -- El[0]
-   end
-   res = res / 2
-   x[2] = torch.zeros(2*channels[L+1][2], res, res)            -- RL+1
-
-   return x
-end
-
 local function block(l, L, iChannel, oChannel, vis)
    local inputs = {}
 
@@ -99,9 +103,7 @@ local function block(l, L, iChannel, oChannel, vis)
    local layer = tostring(l)
    if l == 1 then
       A = inputs[1]:annotate{name = 'A' .. layer,
-                    graphAttributes = {
-                    color = 'blue',
-                    fontcolor = 'blue'}}
+                    graphAttributes = gaA}
    else
       local nodeA = nn.Sequential()
       A = (inputs[1]
@@ -109,9 +111,7 @@ local function block(l, L, iChannel, oChannel, vis)
                   :add(nn.ReLU())
                   :add(nn.SpatialMaxPooling(2, 2, 2, 2)))
                   :annotate{name = 'A' .. layer,
-                   graphAttributes = {
-                   color = 'blue',
-                   fontcolor = 'blue'}}
+                   graphAttributes = gaA}
    end
 
    -- Get Rl
@@ -125,18 +125,14 @@ local function block(l, L, iChannel, oChannel, vis)
                - nodeAh:add(SC(2*oChannel, oChannel, 3, 3, 1, 1, 1, 1))
                        :add(nn.ReLU()))
                        :annotate{name = 'Ah' .. layer,
-                        graphAttributes = {
-                        style = 'filled',
-                        fillcolor = 'skyblue'}}
+                        graphAttributes = gaAh}
 
    -- Error between A and A hat
    local E = ({{A, Ah} - nn.CSubTable(1) - nn.ReLU(),
               {Ah, A} - nn.CSubTable(1) - nn.ReLU()}
              - nn.JoinTable(1))
                :annotate{name = 'E' .. layer,
-                graphAttributes = {
-                style = 'filled',
-                fillcolor = 'lightpink'}}
+                graphAttributes = gaE}
 
    local g
    if l == 1 then
@@ -190,9 +186,7 @@ local function stackBlocks(L, channels, vis)
    outputs[2*L] = ({inputs[2], inputs[2*L+1], inputs[2*L+2]}
                   - RNN.getModel(2*oChannel, Rl_1Channel))
                    :annotate{name = 'R' .. tostring(L),
-                    graphAttributes = {
-                    style = 'filled',
-                    fillcolor = 'springgreen'}}
+                    graphAttributes = gaR}
 
    -- Calculate RL-1 -> RL-2 -> ... -> R1
    for l = L-1, 1, -1 do
@@ -203,9 +197,7 @@ local function stackBlocks(L, channels, vis)
       outputs[2*l] = ({outputs[2*(l+1)], inputs[2*l+1], inputs[2*l+2]}
                      - RNN.getModel(2*oChannel, Rl_1Channel))
                       :annotate{name = 'R' .. tostring(l),
-                       graphAttributes = {
-                       style = 'filled',
-                       fillcolor = 'springgreen'}}
+                       graphAttributes = gaR}
    end
 
 --------------------------------------------------------------------------------
@@ -220,26 +212,20 @@ local function stackBlocks(L, channels, vis)
          local E_Ah = ({inputs[1], outputs[2*l]}
                       - block(l, L, iChannel, oChannel, vis))
                        :annotate{name = '{E / Ah}: ' .. tostring(l),
-                        graphAttributes = {
-                        style = 'filled',
-                        fillcolor = 'lightpink'}}
+                        graphAttributes = gaE}
          local E, Ah = E_Ah:split(2)
          outputs[2*l+1] = E:annotate{name = 'E: ' .. tostring(l),
                             graphAttributes = {
                             style = 'filled',
                             fillcolor = 'hotpink'}}
          outputs[1] = Ah:annotate{name = 'Prediction',
-                         graphAttributes = {
-                         style = 'filled',
-                         fillcolor = 'skyblue'}}
+                         graphAttributes = gaAh}
       else                    -- Rest of the blocks have only E as output
                               -- El-1,           Rl
          outputs[2*l+1] = ({outputs[2*l-1], outputs[2*l]}
                           - block(l, L, iChannel, oChannel, vis))
                            :annotate{name = 'E: ' .. tostring(l),
-                            graphAttributes = {
-                            style = 'filled',
-                            fillcolor = 'lightpink'}}
+                            graphAttributes = gaE}
       end
    end
 
@@ -290,7 +276,7 @@ function prednet:getModel()
 
    for i = 1, seq do
       local inputFrame = nn.SelectTable(i)(splitInput)
-                         :annotate{name = 'Input Frame: ' .. tostring(i),
+                         :annotate{name = 'Input Frame #' .. tostring(i),
                           graphAttributes = {
                           style = 'filled',
                           fillcolor = 'gold1'}}
@@ -298,7 +284,7 @@ function prednet:getModel()
       -- Get Ah1 and all the El-Rl pairs as output from all the stacked layers
       local tempStates = ({inputFrame, RL_1, table.unpack(H)}
                            - clones[i])
-                            :annotate{name = 'Model Sequence: ' .. tostring(i),
+                            :annotate{name = 'Model Clone #' .. tostring(i),
                              graphAttributes = {
                              style = 'filled',
                              fillcolor = 'moccasin'}}
@@ -306,9 +292,7 @@ function prednet:getModel()
       -- Only Ah1 is sent as output
       outputs[i] = nn.SelectTable(1)(tempStates)         -- Send Ah to output
                    :annotate{name = 'Prediction',
-                    graphAttributes = {
-                    style = 'filled',
-                    fillcolor = 'skyblue'}}
+                    graphAttributes = gaAh}
 
       -- Rest of the {Rl, El} pairs are reused as {Rl[t-1], El[t-1]}
       if i < seq then
