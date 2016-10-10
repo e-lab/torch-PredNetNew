@@ -16,7 +16,6 @@ local prednet = require 'prednet'
 local opt = opts.parse(arg)
 opt.res = 64
 
-local g = model:getModel()
 prednet:__init(opt)
 
 prednet:getModel()
