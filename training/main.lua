@@ -34,7 +34,7 @@ opt = lapp [[
   --lstmLayers            (default 1)     number of layers of ConvLSTM
   --inputSizeW            (default 64)    width of each input patch or image
   --inputSizeH            (default 64)    width of each input patch or image
-  --nSeq                  (default 19)    input video sequence lenght
+  --nSeq                  (default 20)    input video sequence lenght
   --stride                (default 1)     stride in convolutions
   --padding               (default 1)     padding in convolutions
   --poolsize              (default 2)     maxpooling size
@@ -74,7 +74,6 @@ local function main()
     require 'cunn'
     require 'cutorch'
     model:cuda()
-    criterion:cuda()
   end
 
   print('Using large dataset?', opt.dataBig)
@@ -139,25 +138,23 @@ local function main()
       target = torch.Tensor()
       sample = datasetSeq[t]
       data = sample[1]
-      for i = 1, data:size(1)-1 do
+      for i = 1, data:size(1) do
         if opt.useGPU then
           table.insert(seqTable, data[i]:cuda())
         else
           table.insert(seqTable, data[i]) -- use CPU
         end
       end
-      target:resizeAs(data[1]):copy(data[data:size(1)])
-      if opt.useGPU then target = target:cuda() end
-
       -- prepare table of states and input:
       table.insert(inTableG0, seqTable)
-
-      -- estimate f and gradients
       output = model:forward(inTableG0)
-      f = f + criterion:forward(output, target)
-      local dE_dy = criterion:backward(output, target)
+      target:resizeAs(data[1]):copy(data[data:size(1)])
+      if opt.useGPU then target = target:cuda() end
+      -- estimate f and gradients
+      local dE_dy = {torch.zeros(output[1]:size()):cuda(),output[2]}
       model:backward(inTableG0,dE_dy)
       dE_dw:add(opt.weightDecay, w)
+      f = f + output[2]:sum()
 
       -- return f and df/dX
       return f, dE_dw
@@ -166,7 +163,7 @@ local function main()
     if math.fmod(t, opt.dataEpoch) == 0 then
       epoch = epoch + 1
       print('Training epoch #', epoch)
-      opt.learningRate = opt.learningRate * 1/2
+      opt.learningRate = opt.learningRate
       optimState.learningRate = opt.learningRate
     end
 
@@ -186,7 +183,7 @@ local function main()
                     seqTable[#seqTable-1]:squeeze(),
                     seqTable[#seqTable]:squeeze(),
                     target:squeeze(),
-                    output:squeeze() }
+                    output[1]:squeeze() }
       if opt.display then
         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
                             legend = 't-3, t-2, t-1, t, Target, Prediction'}

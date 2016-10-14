@@ -22,13 +22,11 @@ local unit = MatchNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt
 -- nngraph.annotateNodes()
 -- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
-
 -- clone model through time-steps:
 local clones = {}
 for i = 1, opt.nSeq do
    clones[i] = unit:clone('weight','bias','gradWeight','gradBias')
 end
-
 
 -- create model by connecting clones outputs and setting up global input:
 -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
@@ -75,16 +73,16 @@ for L=1, opt.nlayers do
    table.insert(inputs, C0[L])
    table.insert(inputs, H0[L])
    table.insert(outputs, P[L])
+   table.insert(outputs, E[L])
 end
 table.insert(inputs, xi)
 if opt.nlayers > 1 then
-   outputs = {outputs-nn.SelectTable(1)}
+   outputs = {outputs-nn.SelectTable(1), outputs-nn.SelectTable(2)}
+   --outputs = {outputs-nn.SelectTable(1)}
 end
 model = nn.gModule(inputs, outputs ) -- output is P_layer_1 (prediction / Ah)
 -- nngraph.annotateNodes()
 -- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
-
-
 
 -- test overall model
 print('Testing model')
@@ -98,11 +96,7 @@ for L=1, opt.nlayers do
 end
 table.insert( inTable,  inSeqTable ) -- input sequence
 local outTable = model:updateOutput(inTable)
-print('Model output is: ', outTable:size())
+--print('Model output is: ', outTable:size())
 -- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
 
-
-criterion = nn.MSECriterion()
--- criterion = nn.AbsCriterion()
--- criterion.sizeAverage = false
 
