@@ -1,3 +1,17 @@
+function computMatric(targetC, targetF, output)
+   criterion = nn.MSECriterion()
+   cerr = criterion:forward(targetC,output[1])
+   ferr = criterion:forward(targetF,output[1])
+   return cerr, ferr
+end
+function writLog(cerr,ferr,loss,logger)
+   print(string.format('cerr : %.4f ferr: %.4f loss: %.2f',cerr, ferr, loss))
+   logger:add{
+      ['cerr'] = cerr,
+      ['ferr']  = ferr,
+      ['loss'] = loss
+   }
+end
 function prepareData(opt, sample)
    if opt.useGPU then
       require 'cunn'
@@ -29,32 +43,35 @@ function prepareData(opt, sample)
    -- prepare table of states and input:
    table.insert(inTableG0, seqTable)
    -- Target
-   targetP, targetC= torch.Tensor(), torch.Tensor()
-   targetC:resizeAs(data[1]):copy(data[data:size(1)])
-   targetP:resizeAs(data[1]):copy(data[data:size(1)])
+   targetC, targetF= torch.Tensor(), torch.Tensor()
+   targetF:resizeAs(data[1]):copy(data[data:size(1)])
+   targetC:resizeAs(data[1]):copy(data[data:size(1)-1])
    if opt.useGPU then
-      targetP = targetP:cuda()
+      targetF = targetF:cuda()
       targetC = targetC:cuda()
    end
-   return inTableG0, targetP, targetC
+   return inTableG0, targetC, targetF
 end
-function display(seqTable,targetC,targetP,output)
+function display(seqTable,targetF,targetC,output)
+         if opt.display then require 'env' end
          local pic = { seqTable[#seqTable-3]:squeeze(),
                        seqTable[#seqTable-2]:squeeze(),
-                       targetP:squeeze(),
                        targetC:squeeze(),
+                       targetF:squeeze(),
                        output[1]:squeeze() }
          _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
                             legend = 't-3, t-2, t-1, Target, Prediction'}
 end
 function save(target, output, model, optimState, opt)
-    if opt.savePics and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
+   --Save pics
+   if opt.savePics and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
       image.save(opt.savedir ..'/pic_target_'..t..'.jpg', target)
       image.save(opt.savedir ..'/pic_output_'..t..'.jpg', output)
-    end
-
-    if opt.save and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
+   end
+   --Save models
+   if opt.save and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
       torch.save(opt.savedir .. '/model_' .. t .. '.net', model)
       torch.save(opt.savedir .. '/optimState_' .. t .. '.t7', optimState)
-    end
+      torch.save(opt.savedir .. '/opt' .. t .. '.t7', opt)
+   end
 end

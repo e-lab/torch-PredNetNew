@@ -8,6 +8,13 @@ require 'nn'
 require 'models/matchnet'
 -- nngraph.setDebug(true)
 function getModel()
+   for i =1 , opt.nlayers do
+      if i == 1 then
+         opt.nFilters  = {1} -- number of filters in the encoding/decoding layers
+      else
+         table.insert(opt.nFilters, (i-1)*32)
+      end
+   end
    local clOpt = {}
    clOpt['nSeq'] = opt.nSeq
    clOpt['kw'] = 3

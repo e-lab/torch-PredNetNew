@@ -1,4 +1,4 @@
-function train(opt,datasetSeq, epoch)
+function train(opt,datasetSeq, epoch, trainLog)
    --Init optimState
    local optimState = {
      learningRate = opt.learningRate,
@@ -23,31 +23,34 @@ function train(opt,datasetSeq, epoch)
    print('Number of parameters ' .. w:nElement())
    print('Number of grads ' .. dE_dw:nElement())
 
-   local err = 0
+   local cerr, ferr, loss= 0, 0, 0
    -- set training iterations and epochs according to dataset size:
   print('Training epoch #', epoch)
 
    -- train:
    local iteration = datasetSeq:size()
+   iteration = 10
    for t = 1, iteration do
-
+      xlua.progress(t, iteration)
       -- define eval closure
       local eval_E = function(w)
-        local f = 0
 
         model:zeroGradParameters()
         local sample = datasetSeq[t]
-        local inTableG0, targetP, targetC = prepareData(opt,sample)
+        local inTableG0, targetC, targetF = prepareData(opt,sample)
         --Get output
         -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
         output = model:forward(inTableG0)
+        tcerr , tferr = computMatric(targetC, targetF, output)
         -- estimate f and gradients
         -- Criterion is embedded
         local dE_dy = {torch.zeros(output[1]:size()):cuda(),output[2]}
         -- Update Model
         model:backward(inTableG0,dE_dy)
         -- Calculate Error and sum
-        f = f + output[2]:sum()
+        cerr = cerr + tcerr
+        ferr = ferr + tferr
+        f = output[2]:sum()
 
         -- return f and df/dX
         return f, dE_dw
@@ -56,22 +59,25 @@ function train(opt,datasetSeq, epoch)
 
       _,fs = optim.adam(eval_E, w, optimState)
 
-      err = err + fs[1]
+      loss = loss + fs[1]
 
       --------------------------------------------------------------------
       -- compute statistics / report error
       if math.fmod(t, 1) == 0 then
-        print('==>Train iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..optimState.learningRate )
-        err = 0
         -- Display
         if opt.display then
-           display(seqTable,targetC,targetP)
+           display(seqTable,targetF,targetC)
         end
       end
    end
    -- Save file
-   if math.fmod(epoch,opt.maxEpochs ) == 0 and t>1 then
+   if math.fmod(epoch,opt.maxEpochs ) == 0  then
       save(target, output, model, optimState, opt)
    end
+   cerr = cerr/iteration
+   ferr = ferr/iteration
+   loss = loss/iteration
+   writLog(cerr,ferr,loss,trainLog)
+   print('Learning Rate: ',optimState.learningRate)
    print ('Training completed!')
 end
