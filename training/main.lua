@@ -61,8 +61,8 @@ os.execute('mkdir '..opt.savedir)
 print('Using GPU?', opt.useGPU)
 print('How many layers?' ,opt.nlayers)
 --Call files
-paths.dofile('util.lua')
-paths.dofile('data.lua')
+paths.dofile('misc/util.lua')
+paths.dofile('misc/data.lua')
 paths.dofile('train.lua')
 paths.dofile('test.lua')
 

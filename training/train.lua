@@ -8,7 +8,7 @@ function train(opt,datasetSeq, epoch)
    }
 
       --Get model
-   paths.dofile('model.lua')
+   paths.dofile('models/model.lua')
    model = getModel()
    if opt.useGPU then
       require 'cunn'
@@ -24,7 +24,6 @@ function train(opt,datasetSeq, epoch)
    print('Number of grads ' .. dE_dw:nElement())
 
    local err = 0
-   --[[
    -- set training iterations and epochs according to dataset size:
   print('Training epoch #', epoch)
 
@@ -74,6 +73,5 @@ function train(opt,datasetSeq, epoch)
    if math.fmod(epoch,opt.maxEpochs ) == 0 and t>1 then
       save(target, output, model, optimState, opt)
    end
-   --]]
    print ('Training completed!')
 end

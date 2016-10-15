@@ -5,8 +5,8 @@ function loadData(big)
   print('Using large dataset?',big)
   local dataFile, datasetSeq
   if big then
-    dataFile  = 'data-big-train.t7'
-    dataFileTest = 'data-big-test.t7'
+    dataFile  = 'dataSets/data-big-train.t7'
+    dataFileTest = 'dataSets/data-big-test.t7'
   else
     dataFile  = 'data-small-train.t7'
     dataFileTest = 'data-small-test.t7'
@@ -25,7 +25,7 @@ function getdataSeq(datafile, big)
    local nseq  = data:size(2)
    local nrows = data:size(4)
    local ncols = data:size(5)
-   print ('Training data size: '..nsamples ..' '..nseq..' '..nrows..' '..ncols)
+   print ('Dataset size: '..nsamples ..' '..nseq..' '..nrows..' '..ncols)
    function datasetSeq:size()
       return nsamples
    end

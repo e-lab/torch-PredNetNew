@@ -5,7 +5,7 @@
 --
 
 require 'nn'
-require 'matchnet'
+require 'models/matchnet'
 -- nngraph.setDebug(true)
 function getModel()
    local clOpt = {}
