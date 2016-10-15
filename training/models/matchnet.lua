@@ -5,7 +5,7 @@
 
 require 'nn'
 require 'nngraph'
-require 'convLSTM'
+require 'models/convLSTM'
 local c = require 'trepl.colorize'
 
 
@@ -33,7 +33,7 @@ function MatchNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       inputs[ 3*L ] = nn.Identity()() -- C(t-1), LSTM cell state
       inputs[3*L+1] = nn.Identity()() -- H(t-1), LSTM hidden state
    end
-   
+
    -- generating network layers (2 for loops):
 
    -- first recurrent branch needs to be updated from top:
@@ -61,7 +61,7 @@ function MatchNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
 
    -- the we update bottom-up discriminator and generator network:
    for L = 1, nlayers do
-      if testing then print('MatchNet model: creating layer:', L) end 
+      if testing then print('MatchNet model: creating layer:', L) end
 
       -- A branch:
       if L == 1 then
@@ -77,7 +77,7 @@ function MatchNet(nlayers, input_stride, poolsize, mapss, clOpt, testing)
       -- A-hat branch:
       cAh = nn.SpatialConvolution(mapss[L], mapss[L], 3, 3, input_stride, input_stride, 1, 1) -- Ah convolution
       iR = R[L] - nn.SelectTable(2) -- select 2nd = LSTM cell state
-      if L == 1 then 
+      if L == 1 then
          Ah = {iR} - cAh - nn.HardTanh(0,1) -- saturating ReLU like in original paper
       else
          Ah = {iR} - cAh - nn.ReLU()
