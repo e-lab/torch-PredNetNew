@@ -29,7 +29,6 @@ function train(opt,datasetSeq, epoch, trainLog)
 
    -- train:
    local iteration = datasetSeq:size()
-   iteration = 10
    for t = 1, iteration do
       xlua.progress(t, iteration)
       -- define eval closure
