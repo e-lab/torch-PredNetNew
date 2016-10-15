@@ -18,7 +18,7 @@ opt = lapp [[
   --savedir         (default './results')  subdirectory to save experiments in
   --seed                (default 1250)     initial random seed
   --useGPU                                 use GPU in training
-
+  --GPUID               (default 1)        select GPU
   Data parameters:
   --dataBig                                use large dataset or reduced one
 
@@ -60,149 +60,96 @@ torch.manualSeed(opt.seed)
 os.execute('mkdir '..opt.savedir)
 print('Using GPU?', opt.useGPU)
 print('How many layers?' ,opt.nlayers)
-
+paths.dofile('data.lua')
+paths.dofile('model.lua')
+paths.dofile('util.lua')
+--Init optimState
+local optimState = {
+  learningRate = opt.learningRate,
+  momentum = opt.momentum,
+  learningRateDecay = opt.learningRateDecay,
+  weightDecay = opt.weightDecay
+}
+--Get model
+model = getModel()
 local function main()
-  local w, dE_dw
+   if opt.useGPU then
+      require 'cunn'
+      require 'cutorch'
+      cutorch.setDevice(opt.GPUID)
+      model:cuda()
+   end
+   print('Loading data...')
+   local dataFile, dataFileTest = loadData(opt.dataBig)
+   local datasetSeq = getdataSeq(dataFile, opt.dataBig) -- we sample nSeq consecutive frames
 
-  -- cutorch.setDevice(1)
-  paths.dofile('data.lua')
-  paths.dofile('model.lua')
-  -- print('This is the model:', {model})
+   print  ('Loaded ' .. datasetSeq:size() .. ' images')
 
-  -- send everything to GPU
-  if opt.useGPU then
-    require 'cunn'
-    require 'cutorch'
-    model:cuda()
-  end
+   print('==> training model')
+   model:training()
+   local w, dE_dw = model:getParameters()
+   print('Number of parameters ' .. w:nElement())
+   print('Number of grads ' .. dE_dw:nElement())
 
-  print('Using large dataset?', opt.dataBig)
-  local dataFile, datasetSeq
-  if opt.dataBig then
-    dataFile  = 'data-big-train.t7'
-    dataFileTest = 'data-big-test.t7'
-  else
-    dataFile  = 'data-small-train.t7'
-    dataFileTest = 'data-small-test.t7'
-  end
+   local err = 0
+   local epoch = 1
 
-  print('Loading training data...')
-  datasetSeq = getdataSeq(dataFile, opt.dataBig) -- we sample nSeq consecutive frames
-  print  ('Loaded ' .. datasetSeq:size() .. ' images')
+   -- set training iterations and epochs according to dataset size:
+   opt.dataEpoch = datasetSeq:size()
+   opt.maxIter = opt.dataEpoch * opt.maxEpochs
 
-  print('==> training model')
-  w, dE_dw = model:getParameters()
-  print('Number of parameters ' .. w:nElement())
-  print('Number of grads ' .. dE_dw:nElement())
+   -- train:
+   for t = 1, opt.maxIter do
 
-  local err = 0
-  local epoch = 1
+      -- define eval closure
+      local eval_E = function(w)
+        local f = 0
 
-  local optimState = {
-    learningRate = opt.learningRate,
-    momentum = opt.momentum,
-    learningRateDecay = opt.learningRateDecay
-  }
+        model:zeroGradParameters()
+        local sample = datasetSeq[t]
+        local inTableG0, targetP, targetC = prepareData(opt,sample)
+        --Get output
+        -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
+        output = model:forward(inTableG0)
+        -- estimate f and gradients
+        -- Criterion is embedded
+        local dE_dy = {torch.zeros(output[1]:size()):cuda(),output[2]}
+        -- Update Model
+        model:backward(inTableG0,dE_dy)
+        -- Calculate Error and sum
+        f = f + output[2]:sum()
 
-  model:training()
+        -- return f and df/dX
+        return f, dE_dw
+      end
 
-  -- set training iterations and epochs according to dataset size:
-  opt.dataEpoch = datasetSeq:size()
-  opt.maxIter = opt.dataEpoch * opt.maxEpochs
+      if math.fmod(t, opt.dataEpoch) == 0 then
+        epoch = epoch + 1
+        print('Training epoch #', epoch)
+        optimState.learningRate = optimState.learningRate
+      end
 
-  -- train:
-  for t = 1, opt.maxIter do
+      _,fs = optim.adam(eval_E, w, optimState)
 
-    -- define eval closure
-    local eval_E = function(w)
-      local f = 0
+      err = err + fs[1]
 
-      model:zeroGradParameters()
-
-      -- reset initial network state:
-      local inTableG0 = {}
-      for L=1, opt.nlayers do
-        if opt.useGPU then
-          table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- E(t-1)
-          table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- C(t-1)
-          table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- H(t-1)
-        else
-          table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)) ) -- E(t-1)
-          table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- C(t-1)
-          table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- H(t-1)
+      --------------------------------------------------------------------
+      -- compute statistics / report error
+      if math.fmod(t, 1) == 0 then
+        print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..optimState.learningRate )
+        err = 0
+        -- Display
+        if opt.display then
+           display(seqTable,targetC,targetP)
         end
       end
-
-      -- get input video sequence data:
-      seqTable = {} -- stores the input video sequence
-      target = torch.Tensor()
-      sample = datasetSeq[t]
-      data = sample[1]
-      for i = 1, data:size(1) do
-        if opt.useGPU then
-          table.insert(seqTable, data[i]:cuda())
-        else
-          table.insert(seqTable, data[i]) -- use CPU
-        end
+      -- Save file
+      if math.fmod(t, opt.dataEpoch) == 1 and t>1 then
+         save(target, output, model, optimState, opt)
       end
-      -- prepare table of states and input:
-      table.insert(inTableG0, seqTable)
-      output = model:forward(inTableG0)
-      target:resizeAs(data[1]):copy(data[data:size(1)])
-      if opt.useGPU then target = target:cuda() end
-      -- estimate f and gradients
-      local dE_dy = {torch.zeros(output[1]:size()):cuda(),output[2]}
-      model:backward(inTableG0,dE_dy)
-      dE_dw:add(opt.weightDecay, w)
-      f = f + output[2]:sum()
-
-      -- return f and df/dX
-      return f, dE_dw
-    end
-
-    if math.fmod(t, opt.dataEpoch) == 0 then
-      epoch = epoch + 1
-      print('Training epoch #', epoch)
-      opt.learningRate = opt.learningRate
-      optimState.learningRate = opt.learningRate
-    end
-
-    _,fs = optim.adam(eval_E, w, optimState)
-
-    err = err + fs[1]
-
-    --------------------------------------------------------------------
-    -- compute statistics / report error
-    if math.fmod(t, opt.nSeq) == 1 then
-      print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..opt.learningRate )
-
-      err = 0
-
-      local pic = { seqTable[#seqTable-3]:squeeze(),
-                    seqTable[#seqTable-2]:squeeze(),
-                    seqTable[#seqTable-1]:squeeze(),
-                    seqTable[#seqTable]:squeeze(),
-                    target:squeeze(),
-                    output[1]:squeeze() }
-      if opt.display then
-        _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
-                            legend = 't-3, t-2, t-1, t, Target, Prediction'}
-      end
-    end
-
-    if opt.savePics and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
-      image.save(opt.savedir ..'/pic_target_'..t..'.jpg', target)
-      image.save(opt.savedir ..'/pic_output_'..t..'.jpg', output)
-    end
-
-    if opt.save and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
-      torch.save(opt.savedir .. '/model_' .. t .. '.net', model)
-      torch.save(opt.savedir .. '/optimState_' .. t .. '.t7', optimState)
-    end
-
-  end
-  print ('Training completed!')
-  collectgarbage()
+   end
+   print ('Training completed!')
+   collectgarbage()
 end
 
 main()
