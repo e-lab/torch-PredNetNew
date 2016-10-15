@@ -27,52 +27,58 @@ function train(opt,datasetSeq, epoch, trainLog)
    -- set training iterations and epochs according to dataset size:
   print('Training epoch #', epoch)
 
-   -- train:
-   local iteration = datasetSeq:size()
+   local iteartion
+   if opt.iteration == 0 then
+      iteration = datasetSeq:size()
+   else
+      iteration = opt.iteration
+   end
    for t = 1, iteration do
       xlua.progress(t, iteration)
       -- define eval closure
       local eval_E = function(w)
 
-        model:zeroGradParameters()
-        local sample = datasetSeq[t]
-        local inTableG0, targetC, targetF = prepareData(opt,sample)
-        --Get output
-        -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
-        output = model:forward(inTableG0)
-        tcerr , tferr = computMatric(targetC, targetF, output)
-        -- estimate f and gradients
-        -- Criterion is embedded
-        local dE_dy = {torch.zeros(output[1]:size()):cuda(),output[2]}
-        -- Update Model
-        model:backward(inTableG0,dE_dy)
-        -- Calculate Error and sum
-        cerr = cerr + tcerr
-        ferr = ferr + tferr
-        f = output[2]:sum()
+         model:zeroGradParameters()
+         local sample = datasetSeq[t]
+         local inTableG0, targetC, targetF = prepareData(opt,sample)
+         --Get output
+         -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
+         output = model:forward(inTableG0)
+         -- Criterion is embedded
+         -- estimate f and gradients
+         local dE_dy = {torch.zeros(output[1]:size()):cuda(),output[2]}
+         -- Update Grad input
+         model:backward(inTableG0,dE_dy)
 
-        -- return f and df/dX
-        return f, dE_dw
+         -- Display and Save picts
+         if math.fmod(t, opt.disFreq) == 0 then
+           display(opt, seqTable, targetF, targetC, output[1])
+         end
+         if opt.savePic then
+           if math.fmod(t, opt.picFreq) == 0 then
+           savePics(opt,targetF,output[1],epoch,t)
+           end
+         end
+         --Calculate Matric
+         -- Calculate Error and sum
+         tcerr , tferr = computMatric(targetC, targetF, output)
+         cerr = cerr + tcerr
+         ferr = ferr + tferr
+         f = output[2]:sum()
+         -- return f and df/dw
+         return f, dE_dw
       end
-
-
+      --Update model
       _,fs = optim.adam(eval_E, w, optimState)
-
-      loss = loss + fs[1]
-
-      --------------------------------------------------------------------
       -- compute statistics / report error
-      if math.fmod(t, 1) == 0 then
-        -- Display
-        if opt.display then
-           display(seqTable,targetF,targetC)
-        end
-      end
+      loss = loss + fs[1]
+      --------------------------------------------------------------------
    end
-   -- Save file
-   if math.fmod(epoch,opt.maxEpochs ) == 0  then
-      save(target, output, model, optimState, opt)
+   -- Save model
+   if math.fmod(epoch, opt.saveEpoch) == 0  then
+      save(model, optimState, opt, epoch)
    end
+   --Average errors
    cerr = cerr/iteration
    ferr = ferr/iteration
    loss = loss/iteration

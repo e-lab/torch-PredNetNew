@@ -3,7 +3,6 @@ function o.parse(arg)
    local lapp = require 'pl.lapp'
    local opt = lapp [[
      Command line options:
-     --savedir         (default './results')  subdirectory to save experiments in
      --seed                (default 1250)     initial random seed
      --useGPU                                 use GPU in training
      --GPUID               (default 1)        select GPU
@@ -15,7 +14,16 @@ function o.parse(arg)
      -d,--learningRateDecay  (default 0)      learning rate decay
      -w,--weightDecay        (default 0)      L2 penalty on the weights
      -m,--momentum           (default 0.9)    momentum parameter
-     --maxEpochs             (default 100)     max number of training epochs
+     --maxEpochs             (default 100)    max number of training epochs
+     --iteration             (default 0)       like to set own iteration default dataSize
+
+     Save options:
+     --savedir         (default './results')  subdirectory to save experiments in
+     -s,--save                               save models
+     --multySave                             save models respect to saveEpoch
+     --saveEpoch             (default 1 )    Save every period epoch
+     --savePics                              save output images examples
+     --picFreq               (default 10)    if savePics on frequency of save pic
 
      Model parameters:
      --nlayers               (default 3)     number of layers of MatchNet
@@ -27,11 +35,10 @@ function o.parse(arg)
      --padding               (default 1)     padding in convolutions
      --poolsize              (default 2)     maxpooling size
 
-     Display and save parameters:
+     Display:
      -v, --verbose                           verbose output
      --display                               display stuff
-     -s,--save                               save models
-     --savePics                              save output images examples
+     --disFreq               (default 10)    display and save pic every freq
    ]]
    return opt
 end

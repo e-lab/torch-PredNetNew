@@ -52,26 +52,38 @@ function prepareData(opt, sample)
    end
    return inTableG0, targetC, targetF
 end
-function display(seqTable,targetF,targetC,output)
-         if opt.display then require 'env' end
-         local pic = { seqTable[#seqTable-3]:squeeze(),
-                       seqTable[#seqTable-2]:squeeze(),
-                       targetC:squeeze(),
-                       targetF:squeeze(),
-                       output[1]:squeeze() }
-         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
-                            legend = 't-3, t-2, t-1, Target, Prediction'}
-end
-function save(target, output, model, optimState, opt)
-   --Save pics
-   if opt.savePics and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
-      image.save(opt.savedir ..'/pic_target_'..t..'.jpg', target)
-      image.save(opt.savedir ..'/pic_output_'..t..'.jpg', output)
+function display(opt, seqTable,targetF,targetC,output)
+   if opt.display then
+      require 'env'
+      local pic = { seqTable[#seqTable-3]:squeeze(),
+                    seqTable[#seqTable-2]:squeeze(),
+                    targetC:squeeze(),
+                    targetF:squeeze(),
+                    output:squeeze() }
+      _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
+                         legend = 't-3, t-2, t-1, Target, Prediction'}
    end
+end
+function savePics(opt,target,output,epoch,t)
+   --Save pics
+   print('Save pics!')
+   if math.fmod(t, opt.picFreq) == 0 then
+      image.save(paths.concat(opt.savedir ,'pic_target_'..epoch..'_'..t..'.jpg'), target)
+      image.save(paths.concat(opt.savedir ,'pic_output_'..epoch..'_'..t..'.jpg'), output)
+   end
+end
+function save( model, optimState, opt, epoch)
    --Save models
-   if opt.save and math.fmod(t, opt.dataEpoch) == 1 and t>1 then
-      torch.save(opt.savedir .. '/model_' .. t .. '.net', model)
-      torch.save(opt.savedir .. '/optimState_' .. t .. '.t7', optimState)
-      torch.save(opt.savedir .. '/opt' .. t .. '.t7', opt)
+   if opt.save  then
+      print('Save models!')
+      if opt.multySave then
+         torch.save(paths.concat(opt.savedir ,'model_' .. epoch .. '.net'), model)
+         torch.save(paths.concat(opt.savedir ,'optimState_' .. epoch .. '.t7'), optimState)
+         torch.save(paths.concat(opt.savedir ,'opt' .. epoch .. '.t7'), opt)
+      else
+         torch.save(paths.concat(opt.savedir ,'model.net'), model)
+         torch.save(paths.concat(opt.savedir ,'optimState.t7'), optimState)
+         torch.save(paths.concat(opt.savedir ,'opt.t7'), opt)
+      end
    end
 end
