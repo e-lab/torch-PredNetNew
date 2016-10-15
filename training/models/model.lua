@@ -32,7 +32,11 @@ function getModel()
    -- clone model through time-steps:
    local clones = {}
    for i = 1, opt.nSeq do
-      clones[i] = unit:clone('weight','bias','gradWeight','gradBias')
+      if i == 1 then
+         clones[i] = unit:clone()
+      else
+         clones[i] = unit:clone('weight','bias','gradWeight','gradBias')
+      end
    end
 
    -- create model by connecting clones outputs and setting up global input:
