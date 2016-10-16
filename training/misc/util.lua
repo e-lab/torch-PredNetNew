@@ -1,7 +1,8 @@
 function computMatric(targetC, targetF, output)
-   criterion = nn.MSECriterion()
-   cerr = criterion:forward(targetC,output[1])
-   ferr = criterion:forward(targetF,output[1])
+   local criterion = nn.MSECriterion()
+   local cerr = criterion:forward(targetC:squeeze(),output[1]:squeeze())
+   local ferr = criterion:forward(targetF:squeeze(),output[1]:squeeze())
+   local batch = targetC :size(1)
    return cerr, ferr
 end
 function writLog(cerr,ferr,loss,logger)
@@ -12,6 +13,11 @@ function writLog(cerr,ferr,loss,logger)
       ['loss'] = loss
    }
 end
+function shipGPU(table)
+   for i,item in pairs(table) do
+      table[i] = item:cuda()
+   end
+end
 function prepareData(opt, sample)
    if opt.useGPU then
       require 'cunn'
@@ -19,41 +25,57 @@ function prepareData(opt, sample)
    end
    -- reset initial network state:
    local inTableG0 = {}
+   local batch = opt.batch
    for L=1, opt.nlayers do
-     if opt.useGPU then
-       table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- E(t-1)
-       table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- C(t-1)
-       table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)):cuda() ) -- H(t-1)
-     else
-       table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)) ) -- E(t-1)
-       table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- C(t-1)
-       table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- H(t-1)
-     end
+      if opt.batch > 1 then
+         table.insert( inTableG0, torch.zeros(batch,2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)) ) -- E(t-1)
+         table.insert( inTableG0, torch.zeros(batch,opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- C(t-1)
+         table.insert( inTableG0, torch.zeros(batch,opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- H(t-1)
+      else
+         table.insert( inTableG0, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)) ) -- E(t-1)
+         table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- C(t-1)
+         table.insert( inTableG0, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- H(t-1)
+      end
    end
    -- get input video sequence data:
    seqTable = {} -- stores the input video sequence
    data = sample[1]
-   for i = 1, data:size(1) do
-     if opt.useGPU then
-       table.insert(seqTable, data[i]:cuda())
-     else
-       table.insert(seqTable, data[i]) -- use CPU
-     end
+   local range, flag
+   if opt.batch > 1 then
+      range = data:size(2)
+      flag = 2
+   else
+      range = data:size(1)
+      flag = 1
+   end
+   for i = 1, range do
+      table.insert(seqTable, data:select(flag,i)) -- use CPU
+   end
+   --Ship to GPU
+   if opt.useGPU then
+      shipGPU(inTableG0)
+      shipGPU(seqTable)
    end
    -- prepare table of states and input:
    table.insert(inTableG0, seqTable)
    -- Target
-   targetC, targetF= torch.Tensor(), torch.Tensor()
-   targetF:resizeAs(data[1]):copy(data[data:size(1)])
-   targetC:resizeAs(data[1]):copy(data[data:size(1)-1])
+   targetC, targetF = torch.Tensor(), torch.Tensor()
+   if opt.batch == 1 then
+      targetF:resizeAs(data[1]):copy(data[data:size(1)])
+      targetC:resizeAs(data[1]):copy(data[data:size(1)-1])
+   else
+      targetF:resizeAs(data[{{},data:size(1),{},{}}]):copy(data[{{},data:size(1),{},{}}])
+      targetC:resizeAs(data[{{},data:size(1)-1,{},{}}]):copy(data[{{},data:size(1)-1,{},{}}])
+   end
    if opt.useGPU then
       targetF = targetF:cuda()
       targetC = targetC:cuda()
+      data    = data:cuda()
    end
    return inTableG0, targetC, targetF
 end
 function display(opt, seqTable,targetF,targetC,output)
-   if opt.display then
+   if opt.display and opt.batch == 1 then
       require 'env'
       local pic = { seqTable[#seqTable-3]:squeeze(),
                     seqTable[#seqTable-2]:squeeze(),
@@ -67,7 +89,7 @@ end
 function savePics(opt,target,output,epoch,t)
    --Save pics
    print('Save pics!')
-   if math.fmod(t, opt.picFreq) == 0 then
+   if math.fmod(t, opt.picFreq) == 0 and opt.batch == 1 then
       image.save(paths.concat(opt.savedir ,'pic_target_'..epoch..'_'..t..'.jpg'), target)
       image.save(paths.concat(opt.savedir ,'pic_output_'..epoch..'_'..t..'.jpg'), output)
    end

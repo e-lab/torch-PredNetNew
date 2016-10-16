@@ -8,13 +8,12 @@ function loadData(big)
     dataFile  = 'dataSets/data-big-train.t7'
     dataFileTest = 'dataSets/data-big-test.t7'
   else
-    dataFile  = 'data-small-train.t7'
-    dataFileTest = 'data-small-test.t7'
+    dataFile  = 'dataSets/data-small-train.t7'
+    dataFileTest = 'dataSets/data-small-test.t7'
   end
   return dataFile, dataFileTest
 end
-function getdataSeq(datafile, big)
-
+function getdataSeq(datafile, big, batch)
 
    local data
    data = torch.load(datafile) -- if dataset in binary format
@@ -38,13 +37,26 @@ function getdataSeq(datafile, big)
         idx = 1
         print ('data: Shuffle the data')
       end
-      local i = shuffle[idx]
-      local seq = data:select(1,i)
-      idx = idx + 1
+      local seq = torch.Tensor()
+      if batch > 1 then
+         seq:resize(batch,nseq,nrows,ncols)
+         for j = 1 , batch do
+            local i = shuffle[idx]
+            seq[j] = data:select(1,i)
+         end
+         idx = idx + batch
+      else
+         local i = shuffle[idx]
+         seq = data:select(1,i)
+         idx = idx + 1
+      end
       return seq,i
    end
-
-   dsample = torch.Tensor(nseq,1,nrows,ncols)
+   if batch > 1 then
+      dsample = torch.Tensor(batch,nseq,1,nrows,ncols)
+   else
+      dsample = torch.Tensor(nseq,1,nrows,ncols)
+   end
 
    setmetatable(datasetSeq, {__index = function(self, index)
                                        local sample,i = self:selectSeq()

@@ -15,7 +15,7 @@ function test(opt,datasetSeq,epoch,testLog)
 
    local iteration
    if opt.iteration == 0 then
-      iteration = datasetSeq:size()
+      iteration = datasetSeq:size()/opt.batch
    else
       iteration = opt.iteration
    end
@@ -41,9 +41,10 @@ function test(opt,datasetSeq,epoch,testLog)
         end
       end
    end
-   cerr = cerr/iteration
-   ferr = ferr/iteration
-   loss = loss/iteration
+   --Batch is not divided since it is calcuated already in criterion
+   cerr = cerr/iteration/opt.batch
+   ferr = ferr/iteration/opt.batch
+   loss = loss/iteration/opt.batch
    writLog(cerr,ferr,loss,testLog)
    print ('Validation completed!')
 end

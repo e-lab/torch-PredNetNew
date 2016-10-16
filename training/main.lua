@@ -30,8 +30,8 @@ paths.dofile('test.lua')
 local function main()
    print('Loading data...')
    local dataFile, dataFileTest = loadData(opt.dataBig)
-   local datasetSeq = getdataSeq(dataFile, opt.dataBig) -- we sample nSeq consecutive frames
-   local testDatasetSeq = getdataSeq(dataFileTest, opt.dataBig) -- we sample nSeq consecutive frames
+   local datasetSeq = getdataSeq(dataFile, opt.dataBig, opt.batch) -- we sample nSeq consecutive frames
+   local testDatasetSeq = getdataSeq(dataFileTest, opt.dataBig, opt.batch) -- we sample nSeq consecutive frames
    trainLog = optim.Logger(paths.concat(opt.savedir,'train.log'))
    testLog = optim.Logger(paths.concat(opt.savedir,'test.log'))
    --Main loop

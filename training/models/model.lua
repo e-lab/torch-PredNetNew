@@ -25,7 +25,7 @@ function getModel()
    clOpt['lm'] = opt.lstmLayers
 
    -- instantiate MatchNet:
-   local unit = MatchNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, false) -- false testing mode
+   local unit = MatchNet(opt.nlayers, opt.stride, opt.poolsize, opt.nFilters, clOpt, false, opt.batch) -- false testing mode
    -- nngraph.annotateNodes()
    -- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
@@ -57,7 +57,7 @@ function getModel()
    for i=1, opt.nSeq do
       -- set inputs to clones:
       uInputs={}
-      xii = {xi} - nn.SelectTable(i) -- select i-th input from sequence
+      xii = {xi} - nn.SelectTable(i,i) -- select i-th input from sequence
       table.insert(uInputs, xii)
       for L=1, opt.nlayers do
          table.insert(uInputs, E[L])
@@ -69,11 +69,11 @@ function getModel()
       -- connect clones:
       for L=1, opt.nlayers do
          if i < opt.nSeq then
-            E[L] = { tUnit } - nn.SelectTable(4*L-3) -- connect output E to prev E of next clone
-            C[L] = { tUnit } - nn.SelectTable(4*L-2) -- connect output R to same layer E of next clone
-            H[L] = { tUnit } - nn.SelectTable(4*L-1) -- connect output R to same layer E of next clone
+            E[L] = { tUnit } - nn.SelectTable(4*L-3,4*L-3) -- connect output E to prev E of next clone
+            C[L] = { tUnit } - nn.SelectTable(4*L-2,4*L-2) -- connect output R to same layer E of next clone
+            H[L] = { tUnit } - nn.SelectTable(4*L-1,4*L-1) -- connect output R to same layer E of next clone
          else
-            P[L] = { tUnit } - nn.SelectTable(4*L) -- select Ah output as output of network
+            P[L] = { tUnit } - nn.SelectTable(4*L,4*L) -- select Ah output as output of network
          end
       end
    end
@@ -88,7 +88,7 @@ function getModel()
    end
    table.insert(inputs, xi)
    if opt.nlayers > 1 then
-      outputs = {outputs-nn.SelectTable(1), outputs-nn.SelectTable(2)}
+      outputs = {outputs-nn.SelectTable(1,1), outputs-nn.SelectTable(2,2)}
       --outputs = {outputs-nn.SelectTable(1)}
    end
    model = nn.gModule(inputs, outputs ) -- output is P_layer_1 (prediction / Ah)

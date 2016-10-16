@@ -29,7 +29,7 @@ function train(opt,datasetSeq, epoch, trainLog)
 
    local iteartion
    if opt.iteration == 0 then
-      iteration = datasetSeq:size()
+      iteration = datasetSeq:size()/opt.batch
    else
       iteration = opt.iteration
    end
@@ -55,9 +55,7 @@ function train(opt,datasetSeq, epoch, trainLog)
            display(opt, seqTable, targetF, targetC, output[1])
          end
          if opt.savePic then
-           if math.fmod(t, opt.picFreq) == 0 then
            savePics(opt,targetF,output[1],epoch,t)
-           end
          end
          --Calculate Matric
          -- Calculate Error and sum
@@ -79,9 +77,10 @@ function train(opt,datasetSeq, epoch, trainLog)
       save(model, optimState, opt, epoch)
    end
    --Average errors
-   cerr = cerr/iteration
-   ferr = ferr/iteration
-   loss = loss/iteration
+   --Batch is not divided since it is calcuated already in criterion
+   cerr = cerr/iteration/opt.batch
+   ferr = ferr/iteration/opt.batch
+   loss = loss/iteration/opt.batch
    writLog(cerr,ferr,loss,trainLog)
    print('Learning Rate: ',optimState.learningRate)
    print ('Training completed!')
