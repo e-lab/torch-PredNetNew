@@ -64,8 +64,8 @@ function prepareData(opt, sample)
       targetF:resizeAs(data[1]):copy(data[data:size(1)])
       targetC:resizeAs(data[1]):copy(data[data:size(1)-1])
    else
-      targetF:resizeAs(data[{{},data:size(1),{},{}}]):copy(data[{{},data:size(1),{},{}}])
-      targetC:resizeAs(data[{{},data:size(1)-1,{},{}}]):copy(data[{{},data:size(1)-1,{},{}}])
+      targetF:resizeAs(data[{{},data:size(2),{},{}}]):copy(data[{{},data:size(2),{},{}}])
+      targetC:resizeAs(data[{{},data:size(2)-1,{},{}}]):copy(data[{{},data:size(2)-1,{},{}}])
    end
    if opt.useGPU then
       targetF = targetF:cuda()

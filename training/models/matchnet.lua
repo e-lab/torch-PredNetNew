@@ -5,9 +5,9 @@
 
 require 'nn'
 require 'nngraph'
-nngraph.setDebug(true)
 require 'models/convLSTM'
 local c = require 'trepl.colorize'
+--nngraph.setDebug(true)
 
 
 function MatchNet(nlayers, input_stride, poolsize, mapss, clOpt, testing, batch)
