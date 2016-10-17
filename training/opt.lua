@@ -10,7 +10,7 @@ function o.parse(arg)
      --dataBig                                use large dataset or reduced one
 
      Training parameters:
-     -r,--learningRate       (default 0.001)  learning rate
+     -r,--learningRate       (default 1e-4)  learning rate
      -d,--learningRateDecay  (default 0)      learning rate decay
      -w,--weightDecay        (default 0)      L2 penalty on the weights
      -m,--momentum           (default 0.9)    momentum parameter

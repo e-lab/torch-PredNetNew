@@ -2,7 +2,6 @@ function computMatric(targetC, targetF, output)
    local criterion = nn.MSECriterion()
    local cerr = criterion:forward(targetC:squeeze(),output[1]:squeeze())
    local ferr = criterion:forward(targetF:squeeze(),output[1]:squeeze())
-   local batch = targetC :size(1)
    return cerr, ferr
 end
 function writLog(cerr,ferr,loss,logger)
@@ -39,16 +38,17 @@ function prepareData(opt, sample)
    end
    -- get input video sequence data:
    seqTable = {} -- stores the input video sequence
+   --sample is the table
    data = sample[1]
-   local range, flag
+   local nSeq, flag
    if opt.batch > 1 then
-      range = data:size(2)
+      nSeq = data:size(2)
       flag = 2
    else
-      range = data:size(1)
+      nSeq = data:size(1)
       flag = 1
    end
-   for i = 1, range do
+   for i = 1, nSeq do
       table.insert(seqTable, data:select(flag,i)) -- use CPU
    end
    --Ship to GPU
@@ -61,11 +61,12 @@ function prepareData(opt, sample)
    -- Target
    targetC, targetF = torch.Tensor(), torch.Tensor()
    if opt.batch == 1 then
-      targetF:resizeAs(data[1]):copy(data[data:size(1)])
-      targetC:resizeAs(data[1]):copy(data[data:size(1)-1])
+      --Extract last sequence to do metric
+      targetF:resizeAs(data[nSeq]):copy(data[nSeq])
+      targetC:resizeAs(data[nSeq]):copy(data[nSeq-1])
    else
-      targetF:resizeAs(data[{{},data:size(2),{},{}}]):copy(data[{{},data:size(2),{},{}}])
-      targetC:resizeAs(data[{{},data:size(2)-1,{},{}}]):copy(data[{{},data:size(2)-1,{},{}}])
+      targetF:resizeAs(data[{{},nSeq,{},{}}]):copy(data[{{},nSeq,{},{}}])
+      targetC:resizeAs(data[{{},nSeq-1,{},{}}]):copy(data[{{},nSeq-1,{},{}}])
    end
    if opt.useGPU then
       targetF = targetF:cuda()

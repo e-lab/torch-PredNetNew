@@ -1,21 +1,21 @@
+paths.dofile('models/model.lua')
+model = getModel()
+if opt.useGPU then
+   require 'cunn'
+   require 'cutorch'
+   cutorch.setDevice(opt.GPUID)
+   model:cuda()
+end
+--Init optimState
+local optimState = {
+  learningRate = opt.learningRate,
+  momentum = opt.momentum,
+  learningRateDecay = opt.learningRateDecay,
+  weightDecay = opt.weightDecay
+}
 function train(opt,datasetSeq, epoch, trainLog)
-   --Init optimState
-   local optimState = {
-     learningRate = opt.learningRate,
-     momentum = opt.momentum,
-     learningRateDecay = opt.learningRateDecay,
-     weightDecay = opt.weightDecay
-   }
 
       --Get model
-   paths.dofile('models/model.lua')
-   model = getModel()
-   if opt.useGPU then
-      require 'cunn'
-      require 'cutorch'
-      cutorch.setDevice(opt.GPUID)
-      model:cuda()
-   end
    print('==> training model')
    print  ('Loaded ' .. datasetSeq:size() .. ' images')
    model:training()
@@ -44,9 +44,14 @@ function train(opt,datasetSeq, epoch, trainLog)
          --Get output
          -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
          output = model:forward(inTableG0)
+         print(output)
+         local dE_dy = {}
+         table.insert(dE_dy,torch.zeros(output[1]:size()):cuda())
+         for i = 1 , opt.nlayers do
+            table.insert(dE_dy,output[i+1])
+         end
          -- Criterion is embedded
          -- estimate f and gradients
-         local dE_dy = {torch.zeros(output[1]:size()):cuda(),output[2]}
          -- Update Grad input
          model:backward(inTableG0,dE_dy)
 
@@ -62,7 +67,11 @@ function train(opt,datasetSeq, epoch, trainLog)
          tcerr , tferr = computMatric(targetC, targetF, output)
          cerr = cerr + tcerr
          ferr = ferr + tferr
-         f = output[2]:sum()
+         local f = 0
+         for i = 1 , opt.nlayers do
+            f = f + output[i]:sum()
+         end
+         dE_dw:clamp(-5,5)
          -- return f and df/dw
          return f, dE_dw
       end

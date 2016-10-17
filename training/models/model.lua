@@ -79,16 +79,18 @@ function getModel()
    end
    local inputs = {}
    local outputs = {}
+   local tmp  = {}
+   local tmp2 = {}
    for L=1, opt.nlayers do
       table.insert(inputs, E0[L])
       table.insert(inputs, C0[L])
       table.insert(inputs, H0[L])
-      table.insert(outputs, P[L])
-      table.insert(outputs, E[L])
+      table.insert(tmp, P[L])
+      table.insert(tmp2, E[L])
    end
    table.insert(inputs, xi)
    if opt.nlayers > 1 then
-      outputs = {outputs-nn.SelectTable(1,1), outputs-nn.SelectTable(2,2)}
+      outputs = {tmp-nn.SelectTable(1,1), table.unpack(tmp2)}
       --outputs = {outputs-nn.SelectTable(1)}
    end
    model = nn.gModule(inputs, outputs ) -- output is P_layer_1 (prediction / Ah)
