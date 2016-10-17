@@ -41,8 +41,8 @@ function getModel()
 
    -- create model by connecting clones outputs and setting up global input:
    -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-   local E, C, H, E0, C0, H0, tUnit, P, xii, uInputs
-   E={} C={} H={} E0={} C0={} H0={} P={}
+   local E, C, H, E0, C0, H0, tUnit, P, xii, uInputs, tmp2
+   E={} C={} H={} E0={} C0={} H0={} P={} tmp2={}
    -- initialize inputs:
    local xi = nn.Identity()()
    for L=1, opt.nlayers do
@@ -72,25 +72,28 @@ function getModel()
             E[L] = { tUnit } - nn.SelectTable(4*L-3,4*L-3) -- connect output E to prev E of next clone
             C[L] = { tUnit } - nn.SelectTable(4*L-2,4*L-2) -- connect output R to same layer E of next clone
             H[L] = { tUnit } - nn.SelectTable(4*L-1,4*L-1) -- connect output R to same layer E of next clone
+            if L == 1 then
+               table.insert(tmp2, E[L])
+            end
          else
             P[L] = { tUnit } - nn.SelectTable(4*L,4*L) -- select Ah output as output of network
+            if L == 1  then
+               table.insert(tmp2, { tUnit } - nn.SelectTable(4*L-3,4*L-3)) -- connect output E to prev E of next clone
+            end
          end
       end
    end
    local inputs = {}
-   local outputs = {}
    local tmp  = {}
-   local tmp2 = {}
    for L=1, opt.nlayers do
       table.insert(inputs, E0[L])
       table.insert(inputs, C0[L])
       table.insert(inputs, H0[L])
       table.insert(tmp, P[L])
-      table.insert(tmp2, E[L])
    end
    table.insert(inputs, xi)
    if opt.nlayers > 1 then
-      outputs = {tmp-nn.SelectTable(1,1), table.unpack(tmp2)}
+      outputs = {tmp - nn.SelectTable(1,1), table.unpack(tmp2)}
       --outputs = {outputs-nn.SelectTable(1)}
    end
    model = nn.gModule(inputs, outputs ) -- output is P_layer_1 (prediction / Ah)

@@ -2,7 +2,13 @@ function computMatric(targetC, targetF, output)
    local criterion = nn.MSECriterion()
    local cerr = criterion:forward(targetC:squeeze(),output[1]:squeeze())
    local ferr = criterion:forward(targetF:squeeze(),output[1]:squeeze())
-   return cerr, ferr
+   local f = 0
+   numE = #output - 1
+   for i = 1 , numE do
+      f = f + output[i+1]:sum()
+   end
+   f = f/numE
+   return cerr, ferr, f
 end
 function writLog(cerr,ferr,loss,logger)
    print(string.format('cerr : %.4f ferr: %.4f loss: %.2f',cerr, ferr, loss))
@@ -16,6 +22,17 @@ function shipGPU(table)
    for i,item in pairs(table) do
       table[i] = item:cuda()
    end
+end
+function prepareDedw(output,targetF)
+   local dE_dy = {}
+   local criterion = nn.MSECriterion():cuda()
+   local dp_dy = criterion:backward(output[1],targetF)
+   --table.insert(dE_dy,torch.zeros(output[1]:size()):cuda())
+   table.insert(dE_dy,dp_dy)
+   for i = 1 , #output - 1 do
+      table.insert(dE_dy,output[i+1])
+   end
+   return dE_dy
 end
 function prepareData(opt, sample)
    if opt.useGPU then
@@ -76,15 +93,26 @@ function prepareData(opt, sample)
    return inTableG0, targetC, targetF
 end
 function display(opt, seqTable,targetF,targetC,output)
-   if opt.display and opt.batch == 1 then
+   if opt.display then
       require 'env'
-      local pic = { seqTable[#seqTable-3]:squeeze(),
-                    seqTable[#seqTable-2]:squeeze(),
-                    targetC:squeeze(),
-                    targetF:squeeze(),
-                    output:squeeze() }
-      _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
-                         legend = 't-3, t-2, t-1, Target, Prediction'}
+      local pic
+      if opt.batch == 1 then
+         pic = { seqTable[#seqTable-2]:squeeze(),
+                          seqTable[#seqTable-2]:squeeze(),
+                          targetC:squeeze(),
+                          targetF:squeeze(),
+                          output:squeeze() }
+         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
+                            legend = 't-3, t-2, t-1, Target, Prediction'}
+      else
+         pic = { seqTable[#seqTable-2][1]:squeeze(),
+                          seqTable[#seqTable-2][1]:squeeze(),
+                          targetC[1]:squeeze(),
+                          targetF[1]:squeeze(),
+                          output[1]:squeeze() }
+         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
+                            legend = 't-3, t-2, t-1, Target, Prediction'}
+      end
    end
 end
 function savePics(opt,target,output,epoch,t)

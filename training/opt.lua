@@ -10,16 +10,17 @@ function o.parse(arg)
      --dataBig                                use large dataset or reduced one
 
      Training parameters:
-     -r,--learningRate       (default 1e-4)  learning rate
-     -d,--learningRateDecay  (default 0)      learning rate decay
-     -w,--weightDecay        (default 0)      L2 penalty on the weights
-     -m,--momentum           (default 0.9)    momentum parameter
-     --maxEpochs             (default 100)    max number of training epochs
-     --iteration             (default 0)       like to set own iteration default dataSize
-     --batch                 (default 10)      batch size
+     -r,--learningRate       (default 1e-3)  learning rate
+     -d,--learningRateDecay  (default 0)     learning rate decay
+     -w,--weightDecay        (default 0)     L2 penalty on the weights
+     -m,--momentum           (default 0.9)   momentum parameter
+     --maxEpochs             (default 100)   max number of training epochs
+     --iteration             (default 0)     like to set own iteration default dataSize
+     --batch                 (default 10)    batch size
+     --clampSize             (default 5)     clamp size
 
      Save options:
-     --savedir         (default './results')  subdirectory to save experiments in
+     --savedir         (default './results') subdirectory to save experiments in
      -s,--save                               save models
      --multySave                             save models respect to saveEpoch
      --saveEpoch             (default 1 )    Save every period epoch

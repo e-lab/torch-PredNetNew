@@ -26,12 +26,12 @@ function test(opt,datasetSeq,epoch,testLog)
       --Get output
       -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
       output = model:forward(inTableG0)
-      tcerr , tferr = computMatric(targetC, targetF, output)
+      tcerr , tferr , tloss = computMatric(targetC, targetF, output)
       -- estimate f and gradients
       -- Calculate Error and sum
       cerr = cerr + tcerr
       ferr = ferr + tferr
-      loss = loss + output[2]:sum()
+      loss = loss + tloss
       --------------------------------------------------------------------
       -- compute statistics / report error
       if math.fmod(t, 1) == 0 then
