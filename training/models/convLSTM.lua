@@ -5,7 +5,6 @@
 
 require 'nn'
 require 'nngraph'
---nngraph.setDebug(true)
 
 local sc = nn.SpatialConvolution
 local scNB = nn.SpatialConvolution:noBias()

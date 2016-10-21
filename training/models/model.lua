@@ -1,5 +1,5 @@
 -- MatchNet training: predicting future frames in video
--- Eugenio Culurciello, August - September 2016
+-- Eugenio Culurciello, Sangpil Kim August - September 2016
 --
 -- code training and testing inspired by: https://github.com/viorik/ConvLSTM
 --
@@ -99,24 +99,3 @@ function getModel()
    model = nn.gModule(inputs, outputs ) -- output is P_layer_1 (prediction / Ah)
    return model
 end
--- nngraph.annotateNodes()
--- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
-
--- test overall model
---[[
-print('Testing model')
-local inTable = {}
-local inSeqTable = {}
-for i = 1, opt.nSeq do table.insert( inSeqTable,  torch.ones( opt.nFilters[1], opt.inputSizeW, opt.inputSizeW) ) end -- input sequence
-for L=1, opt.nlayers do
-   table.insert( inTable, torch.zeros(2*opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- E(t-1)
-   table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1))) -- C(t-1)
-   table.insert( inTable, torch.zeros(opt.nFilters[L], opt.inputSizeW/2^(L-1), opt.inputSizeW/2^(L-1)))-- H(t-1)
-end
-table.insert( inTable,  inSeqTable ) -- input sequence
-local outTable = model:updateOutput(inTable)
---]]
---print('Model output is: ', outTable:size())
--- graph.dot(model.fg, 'MatchNet','Model') -- graph the model!
-
-

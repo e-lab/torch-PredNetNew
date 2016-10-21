@@ -1,5 +1,6 @@
 -- dataset and data code inspired by: https://github.com/viorik/ConvLSTM
 -- uses moving MNIST numbers to create a video animation and fixed lines to debug
+-- SangPil Kim  added batch option
 -------------------------------------------------------------------------------
 function loadData(big)
   print('Using large dataset?',big)

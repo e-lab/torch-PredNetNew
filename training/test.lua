@@ -1,5 +1,7 @@
+-- SangPil Kim, Eugenio Culurciello
+-- August - September 2016
+-------------------------------------------------------------------------------
 function test(opt,datasetSeq,epoch,testLog)
-
    if opt.useGPU then
       require 'cunn'
       require 'cutorch'
@@ -11,7 +13,7 @@ function test(opt,datasetSeq,epoch,testLog)
    local cerr, ferr, loss = 0, 0, 0
 
    -- set training iterations and epochs according to dataset size:
-  print('Validation epoch #', epoch)
+   print('Validation epoch #', epoch)
 
    local iteration
    if opt.iteration == 0 then
@@ -25,8 +27,8 @@ function test(opt,datasetSeq,epoch,testLog)
       local inTableG0, targetC, targetF = prepareData(opt,sample)
       --Get output
       -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
-      output = model:forward(inTableG0)
-      tcerr , tferr , tloss = computMatric(targetC, targetF, output)
+      local output = model:forward(inTableG0)
+      local tcerr , tferr , tloss = computMatric(targetC, targetF, output)
       -- estimate f and gradients
       -- Calculate Error and sum
       cerr = cerr + tcerr
@@ -37,7 +39,8 @@ function test(opt,datasetSeq,epoch,testLog)
       if math.fmod(t, 1) == 0 then
         -- Display
         if opt.display then
-           display(seqTable,targetF,targetC)
+            local disFlag = 'test'
+           display(opt, inTableG0[#inTableG0], targetF, targetC, output[1], disFlag)
         end
       end
    end

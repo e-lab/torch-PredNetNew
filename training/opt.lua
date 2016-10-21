@@ -1,3 +1,6 @@
+-- SangPil Kim, Eugenio Culurciello
+-- August - September 2016
+-------------------------------------------------------------------------------
 local o = {}
 function o.parse(arg)
    local lapp = require 'pl.lapp'
@@ -5,7 +8,7 @@ function o.parse(arg)
      Command line options:
      --seed                (default 1250)     initial random seed
      --useGPU                                 use GPU in training
-     --GPUID               (default 2)        select GPU
+     --GPUID               (default 1)        select GPU
      Data parameters:
      --dataBig                                use large dataset or reduced one
 
@@ -17,7 +20,6 @@ function o.parse(arg)
      --maxEpochs             (default 100)   max number of training epochs
      --iteration             (default 0)     like to set own iteration default dataSize
      --batch                 (default 10)    batch size
-     --clampSize             (default 5)     clamp size
 
      Save options:
      --savedir         (default './results') subdirectory to save experiments in

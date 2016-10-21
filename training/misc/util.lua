@@ -1,9 +1,30 @@
+-- Sangpil Kim, Eugenio Culurciello
+-- August - September 2016
+-------------------------------------------------------------------------------
+function setup(opt)
+   --Get model
+   print('Initialize model')
+   model = getModel()
+   if opt.useGPU then
+      require 'cunn'
+      require 'cutorch'
+      cutorch.setDevice(opt.GPUID)
+      model:cuda()
+   end
+   --Init optimState
+   optimState = {
+     learningRate = opt.learningRate,
+     momentum = opt.momentum,
+     learningRateDecay = opt.learningRateDecay,
+     weightDecay = opt.weightDecay
+   }
+end
 function computMatric(targetC, targetF, output)
    local criterion = nn.MSECriterion()
    local cerr = criterion:forward(targetC:squeeze(),output[1]:squeeze())
    local ferr = criterion:forward(targetF:squeeze(),output[1]:squeeze())
    local f = 0
-   numE = #output - 1
+   local numE = #output - 1
    for i = 1 , numE do
       f = f + output[i+1]:sum()
    end
@@ -54,9 +75,9 @@ function prepareData(opt, sample)
       end
    end
    -- get input video sequence data:
-   seqTable = {} -- stores the input video sequence
+   local seqTable = {} -- stores the input video sequence
    --sample is the table
-   data = sample[1]
+   local data = sample[1]
    local nSeq, flag
    if opt.batch > 1 then
       nSeq = data:size(2)
@@ -76,7 +97,7 @@ function prepareData(opt, sample)
    -- prepare table of states and input:
    table.insert(inTableG0, seqTable)
    -- Target
-   targetC, targetF = torch.Tensor(), torch.Tensor()
+   local targetC, targetF = torch.Tensor(), torch.Tensor()
    if opt.batch == 1 then
       --Extract last sequence to do metric
       targetF:resizeAs(data[nSeq]):copy(data[nSeq])
@@ -92,8 +113,13 @@ function prepareData(opt, sample)
    end
    return inTableG0, targetC, targetF
 end
-function display(opt, seqTable,targetF,targetC,output)
+function display(opt, seqTable,targetF,targetC,output, flag)
    if opt.display then
+      if flag == 'train' then
+        legend = 'Train: t-3, t-2, t-1, Target, Prediction'
+      else
+        legend = 'Test: t-3, t-2, t-1, Target, Prediction'
+      end
       require 'env'
       local pic
       if opt.batch == 1 then
@@ -102,25 +128,28 @@ function display(opt, seqTable,targetF,targetC,output)
                           targetC:squeeze(),
                           targetF:squeeze(),
                           output:squeeze() }
-         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
-                            legend = 't-3, t-2, t-1, Target, Prediction'}
       else
          pic = { seqTable[#seqTable-2][1]:squeeze(),
                           seqTable[#seqTable-2][1]:squeeze(),
                           targetC[1]:squeeze(),
                           targetF[1]:squeeze(),
                           output[1]:squeeze() }
-         _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
-                            legend = 't-3, t-2, t-1, Target, Prediction'}
       end
+      _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
+                         legend = legend}
    end
 end
-function savePics(opt,target,output,epoch,t)
+function savePics(opt,target,output,epoch,t, disFlag)
    --Save pics
    print('Save pics!')
-   if math.fmod(t, opt.picFreq) == 0 and opt.batch == 1 then
-      image.save(paths.concat(opt.savedir ,'pic_target_'..epoch..'_'..t..'.jpg'), target)
-      image.save(paths.concat(opt.savedir ,'pic_output_'..epoch..'_'..t..'.jpg'), output)
+   if disFlag ~= 'train' then disFlag = 'test' end
+   if opt.savePics then
+      if opt.batch > 1 then
+         target = target[1]:squeeze()
+         output = output[1]:squeeze()
+      end
+      image.save(paths.concat(opt.savedir ,'pic_target_'..epoch..'_'..t..'_'..disFlag..'.jpg'), target)
+      image.save(paths.concat(opt.savedir ,'pic_output_'..epoch..'_'..t..'_'..disFlag..'.jpg'), output)
    end
 end
 function save( model, optimState, opt, epoch)

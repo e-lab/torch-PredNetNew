@@ -1,20 +1,6 @@
---Get model
-print('Initialize model')
-paths.dofile('models/model.lua')
-model = getModel()
-if opt.useGPU then
-   require 'cunn'
-   require 'cutorch'
-   cutorch.setDevice(opt.GPUID)
-   model:cuda()
-end
---Init optimState
-local optimState = {
-  learningRate = opt.learningRate,
-  momentum = opt.momentum,
-  learningRateDecay = opt.learningRateDecay,
-  weightDecay = opt.weightDecay
-}
+-- SangPil Kim, Eugenio Culurciello
+-- August - September 2016
+-------------------------------------------------------------------------------
 local prevLoss = 1e10
 
 function train(opt,datasetSeq, epoch, trainLog)
@@ -46,7 +32,7 @@ function train(opt,datasetSeq, epoch, trainLog)
          local inTableG0, targetC, targetF = prepareData(opt,sample)
          --Get output
          -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
-         output = model:forward(inTableG0)
+         local output = model:forward(inTableG0)
          -- Criterion is embedded
          -- estimate f and gradients
          -- Update Grad input
@@ -55,21 +41,20 @@ function train(opt,datasetSeq, epoch, trainLog)
 
          -- Display and Save picts
          if math.fmod(t*opt.batch, opt.disFreq) == 0 then
-            display(opt, seqTable, targetF, targetC, output[1])
-         end
-         if opt.savePic then
-           savePics(opt,targetF,output[1],epoch,t)
+            local disFlag = 'train'
+            display(opt, inTableG0[#inTableG0], targetF, targetC, output[1],disFlag)
+            savePics(opt,targetF,output[1],epoch,t, disFlag)
          end
          --Calculate Matric
          -- Calculate Error and sum
-         tcerr , tferr , f = computMatric(targetC, targetF, output)
+         local tcerr , tferr , f = computMatric(targetC, targetF, output)
          cerr = cerr + tcerr
          ferr = ferr + tferr
          -- return f and df/dw
          return f, dE_dw
       end
       --Update model
-      _,fs = optim.adam(eval_E, w, optimState)
+      local _,fs = optim.adam(eval_E, w, optimState)
       -- compute statistics / report error
       loss = loss + fs[1]
       --------------------------------------------------------------------
