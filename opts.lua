@@ -12,6 +12,7 @@ function opts.parse(arg)
    Command line options:
    ## Hyperpatameters
    --lr           (default 0.001)
+   --nEpochs      (default 100)
 
    ## Dataset
    --datapath     (default /media/)
@@ -29,7 +30,8 @@ function opts.parse(arg)
    --devID        (default 1)          GPU number
 
    ## Miscellaneous parameters
-   --seed         (default 9)
+   --seed         (default 8)
+   --disp                              Display the output
    ]]
 
    return opt
