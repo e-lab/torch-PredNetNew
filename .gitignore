@@ -1,4 +1,6 @@
 #Files
+*.eps
+*.log
 *.dot
 *.svg
 *.t7
