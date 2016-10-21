@@ -1,12 +1,12 @@
 local prednet = {}
 
-require 'nn'
 require 'nngraph'
 
 -- nngraph.setDebug(true)
 
 -- included local packages
 local RNN = require 'RNN'
+local convLSTM = require 'convLSTM'
 
 function prednet:__init(opt)
    -- Input/Output channels for A of every layer
@@ -34,13 +34,15 @@ local function getInput(seq, res, L, channels, mode)
    elseif mode == 2 then
       x[1] = torch.randn(seq, channels[1], res, res)        -- Image
    end
-   x[3] = torch.zeros(channels[1], res, res)                -- R1[0]
-   x[4] = torch.zeros(2*channels[1], res, res)              -- E1[0]
+   x[3] = torch.zeros(channels[1], res, res)                -- C1[0]
+   x[4] = torch.zeros(channels[1], res, res)                -- H1[0]
+   x[5] = torch.zeros(2*channels[1], res, res)              -- E1[0]
 
    for l = 2, L do
       res = res / 2
-      x[2*l+1] = torch.zeros(channels[l], res, res)         -- Rl[0]
-      x[2*l+2] = torch.zeros(2*channels[l], res, res)       -- El[0]
+      x[3*l]   = torch.zeros(channels[l], res, res)         -- C1[0]
+      x[3*l+1] = torch.zeros(channels[l], res, res)         -- Hl[0]
+      x[3*l+2] = torch.zeros(2*channels[l], res, res)       -- El[0]
    end
    res = res / 2
    x[2] = torch.zeros(channels[L+1], res, res)              -- RL+1
@@ -141,11 +143,7 @@ local function block(l, L, iChannel, oChannel, vis)
    end
 
    if vis then
-      if l == 1 then
-         graph.dot(g.fg, 'Block_1', 'graphs/Block_1')
-      elseif l == L then
-         graph.dot(g.fg, 'Block_L', 'graphs/Block_L')
-      end
+      graph.dot(g.fg, 'Block_' .. l, 'graphs/Block_' .. l)
    end
    return g
 end
@@ -154,46 +152,50 @@ local function stackBlocks(L, channels, vis)
    --[[
        L -> Total number of layers
        Input and outputs in time series
-       Inputs: Image   -> A1
-               RL+1    -> RL        This is always set to ZERO
-               Rl[t-1] -> Rl
-               El[t-1] -> Rl
-               Total = 2L+2
+       Inputs: Image   -> A1     (1)
+               RL+1    -> LSTM   (2)      This is always set to ZERO
 
-      Outputs: Ah1, Rl, El
-               Total = 2L+1
+               Cl[t-1] -> LSTM   (3l)     Cell state
+               Hl[t-1] -> LSTM   (3l+1)   Hidden state
+               El[t-1] -> LSTM   (3l+2)   Error
+               Total = 3L+2
+
+               {1, 3l-1, 3l, 3l+1}
+      Outputs: Ah1, Cl, Hl, El
+               Total = 3L+1
    --]]
 
    local inputs = {}
    local outputs = {}
 
    -- Create input and output containers for nngraph gModule for TIME SERIES
-   for i = 1, (2*L+2) do
+   for i = 1, (3*L+2) do
       table.insert(inputs, nn.Identity()())
    end
 
 --------------------------------------------------------------------------------
 -- Get Rl
 --------------------------------------------------------------------------------
-   local Rl_1Channel = channels[L+1]
-   local RlChannel    = channels[L]
-   local oChannel    = channels[L]
-   -- Calculate RL
-   outputs[2*L] = ({inputs[2], inputs[2*L+1], inputs[2*L+2]}
-                  - RNN.getModel(RlChannel, Rl_1Channel))
-                   :annotate{name = 'R' .. tostring(L),
-                    graphAttributes = gaR}
+
+   local upR, R
+   local lstm = {}
 
    -- Calculate RL-1 -> RL-2 -> ... -> R1
-   for l = L-1, 1, -1 do
-      Rl_1Channel = channels[l+1]
-      RlChannel   = channels[l]
-      oChannel    = channels[l]
-      -- Input for R:              Rl+1,       Rl[t-1],       El[t-1]
-      outputs[2*l] = ({outputs[2*(l+1)], inputs[2*l+1], inputs[2*l+2]}
-                     - RNN.getModel(RlChannel, Rl_1Channel))
-                      :annotate{name = 'R' .. tostring(l),
-                       graphAttributes = gaR}
+   for l = L, 1, -1 do
+      if l == L then
+         upR = inputs[2] - nn.SpatialUpSamplingNearest(2)
+      else
+         upR = outputs[3*(l+1)] - nn.SpatialUpSamplingNearest(2)     -- Upsample prev Rl+1
+      end
+      R = {upR, inputs[3*l + 2]} - nn.JoinTable(1)
+
+      lstm = ({R, inputs[3*l], inputs[3*l+1]}
+              - convLSTM:getModel(channels[l+1] + 2 * channels[l], channels[l]))
+               :annotate{name = 'LSTM ' .. l,
+                graphAttributes = gaR}
+
+      outputs[3*l-1] = (lstm - nn.SelectTable(1))    -- Cell State
+      outputs[3*l]   = (lstm - nn.SelectTable(2))    -- Hidden state
    end
 
 --------------------------------------------------------------------------------
@@ -203,13 +205,13 @@ local function stackBlocks(L, channels, vis)
       local oChannel = channels[l]
 
       if l == 1 then          -- First layer block has E and Ah as output
-         --                img,         Rl
-         local E_Ah = ({inputs[1], outputs[2*l]}
+         --                img,        Rl/Hl
+         local E_Ah = ({inputs[1], outputs[3*l]}
                       - block(l, L, oChannel, oChannel, vis))
-                       :annotate{name = '{E / Ah}: ' .. tostring(l),
+                       :annotate{name = '{E / Ah}: ' .. l,
                         graphAttributes = gaE}
          local E, Ah = E_Ah:split(2)
-         outputs[2*l+1] = E:annotate{name = 'E: ' .. tostring(l),
+         outputs[3*l+1] = E:annotate{name = 'E: ' .. l,
                             graphAttributes = {
                             style = 'filled',
                             fillcolor = 'hotpink'}}
@@ -218,9 +220,9 @@ local function stackBlocks(L, channels, vis)
       else                    -- Rest of the blocks have only E as output
                               -- El-1,           Rl
          local iChannel = 2 * channels[l-1]
-         outputs[2*l+1] = ({outputs[2*l-1], outputs[2*l]}
+         outputs[3*l+1] = ({outputs[3*(l-1)+1], outputs[3*l]}
                           - block(l, L, iChannel, oChannel, vis))
-                           :annotate{name = 'E: ' .. tostring(l),
+                           :annotate{name = 'E: ' .. l,
                             graphAttributes = gaE}
       end
    end
@@ -249,7 +251,7 @@ function prednet:getModel()
    local H = {}                              -- States linking seq 1 -> 2 -> ...
    local outputs = {}                        -- Ah1
 
-   for l = 1, 2*L do
+   for l = 1, 3*L do
       -- for annotation
       local styleColor = 'lightpink'
       local nodeName = 'E Sequence(1), Layer(' .. tostring(math.ceil(l/2)) .. ')'
@@ -272,7 +274,7 @@ function prednet:getModel()
 
    for i = 1, seq do
       local inputFrame = nn.SelectTable(i)(splitInput)
-                         :annotate{name = 'Input Frame #' .. tostring(i),
+                         :annotate{name = 'Input Frame #' .. i,
                           graphAttributes = {
                           style = 'filled',
                           fillcolor = 'gold1'}}
@@ -280,7 +282,7 @@ function prednet:getModel()
       -- Get Ah1 and all the El-Rl pairs as output from all the stacked layers
       local tempStates = ({inputFrame, RL_1, table.unpack(H)}
                            - clones[i])
-                            :annotate{name = 'Model Clone #' .. tostring(i),
+                            :annotate{name = 'Model Clone #' .. i,
                              graphAttributes = {
                              style = 'filled',
                              fillcolor = 'moccasin'}}
@@ -290,14 +292,14 @@ function prednet:getModel()
                    :annotate{name = 'Prediction',
                     graphAttributes = gaAh}
 
-      -- Rest of the {Rl, El} pairs are reused as {Rl[t-1], El[t-1]}
+      -- Rest of the {Cl, Hl, El} pairs are reused as {Cl[t-1], Hl[t-1], El[t-1]}
       if i < seq then
-         for l = 1, 2*L do
+         for l = 1, 3*L do
             local styleColor = 'lightpink'
             local nodeName = 'E Sequence(' .. tostring(seq) .. '), Layer(' .. tostring(math.ceil(l/2)) .. ')'
-            if l % 2 == 0 then
+            if l % 3 == 2 then
                styleColor = 'springgreen'
-               nodeName = 'R Sequence(' .. tostring(seq) .. '), Layer(' .. tostring(l/2) .. ')'
+               nodeName = 'R Sequence(' .. tostring(seq) .. '), Layer(' .. tostring((l+1)/3) .. ')'
             end
 
             H[l] = nn.SelectTable(l+1)(tempStates)     -- Pass state values to next sequence
@@ -313,13 +315,13 @@ function prednet:getModel()
 
    if vis then
       -- If you want to view tensor dimensions then uncomment these lines
-      -- local dummyX = getInput(seq, res, L, channels, 2)
-      -- local o = g:forward(dummyX)
-      graph.dot(g.fg, 'PredNet for whole sequence', 'graphs/wholeModel')
-
-      -- dummyX = getInput(seq, res, L, channels, 1)
-      -- o = prototype:forward(dummyX)
+      local dummyX = getInput(seq, res, L, channels, 1)
+      local o = prototype:forward(dummyX)
       graph.dot(prototype.fg, 'PredNet Model', 'graphs/predNet')
+
+      dummyX = getInput(seq, res, L, channels, 2)
+      o = g:forward(dummyX)
+      graph.dot(g.fg, 'PredNet for whole sequence', 'graphs/wholeModel')
    end
 
    return g, clones[1]

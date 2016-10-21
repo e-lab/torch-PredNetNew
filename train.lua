@@ -74,22 +74,25 @@ function train:updateModel()
    -- Initial state/input of the network
    -- {imageSequence, RL+1, R1, E1, R2, E2, ..., RL, EL}
    local H0 = {}
-   H0[3] = torch.zeros(channels[1], res, res)                     -- R1[0]
-   H0[4] = torch.zeros(2*channels[1], res, res)                   -- E1[0]
+   H0[3] = torch.zeros(channels[1], res, res)                  -- C1[0]
+   H0[4] = torch.zeros(channels[1], res, res)                  -- H1[0]
+   H0[5] = torch.zeros(2*channels[1], res, res)                -- E1[0]
 
    for l = 2, L do
       res = res / 2
-      H0[2*l+1] = torch.zeros(channels[l], res, res)              -- Rl[0]
-      H0[2*l+2] = torch.zeros(2*channels[l], res, res)            -- El[0]
+      H0[3*l]   = torch.zeros(channels[l], res, res)           -- C1[0]
+      H0[3*l+1] = torch.zeros(channels[l], res, res)           -- Hl[0]
+      H0[3*l+2] = torch.zeros(2*channels[l], res, res)         -- El[0]
    end
    res = res / 2
-   H0[2] = torch.zeros(channels[L+1], res, res)                   -- RL+1
+   H0[2] = torch.zeros(channels[L+1], res, res)                -- RL+1
+
 
    for itr = 1, dataSize do
       xlua.progress(itr, dataSize)
 
       -- Dimension seq x channels x height x width
-      local xSeq = self.dataset[shuffle[itr]]                     -- 1 -> 20 input image
+      local xSeq = self.dataset[shuffle[itr]]                  -- 1 -> 20 input image
 
       H0[1] = xSeq:clone()
 

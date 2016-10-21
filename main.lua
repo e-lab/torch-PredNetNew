@@ -21,7 +21,7 @@ local train = require 'train'
 -- Input/Output channels for A of every layer
 opt.channels = torch.ones(opt.layers + 1)
 for l = 2, opt.layers + 1 do
-   opt.channels[l] = (l-1) * 32
+   opt.channels[l] = 2^(l+3)
 end
 -- {1, 32, 64, 128, 256, 512}
 
