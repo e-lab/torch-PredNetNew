@@ -17,10 +17,10 @@ require 'xlua'
 require 'pl'
 local of = require 'opt'
 opt = of.parse(arg)
+os.execute('mkdir '..opt.savedir)
 torch.save(paths.concat(opt.savedir,'opt.t7'),opt)
 torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(opt.seed)
-os.execute('mkdir '..opt.savedir)
 print('Using GPU?', opt.useGPU)
 print('How many layers?' ,opt.nlayers)
 
