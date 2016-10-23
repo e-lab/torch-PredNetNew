@@ -10,6 +10,9 @@ function train:__init(opt)
    -- Model parameter
    self.layers = opt.layers
 
+   self.dev = opt.dev
+   self.disp = opt.disp
+
    -- Optimizer parameter
    self.optimState = {learningRate      = opt.learningRate,
                       momentum          = opt.momentum,
@@ -19,13 +22,11 @@ function train:__init(opt)
    -- Dataset parameters
    self.channels = opt.channels
 
-   local dataFile, dataFileTest
+   local dataFile
    if opt.dataBig then
       dataFile     = opt.datapath .. '/data-big-train.t7'
-      dataFileTest = otp.datapath .. 'data-big-test.t7'
    else
       dataFile     = opt.datapath .. '/data-small-train.t7'
-      dataFileTest = opt.datapath .. 'data-small-test.t7'
    end
    self.dataset = torch.load(dataFile):float()/255                  -- load MNIST
    print("Loaded " .. self.dataset:size(1) .. " image sequences")
@@ -41,6 +42,12 @@ function train:__init(opt)
    prednet:__init(opt)
    -- Get the model unwrapped over time as well as the prototype
    self.model, self.prototype = prednet:getModel()
+   self.criterion = nn.MSECriterion()       -- citerion to calculate loss
+
+   if self.dev == 'cuda' then
+      self.model:cuda()
+      self.criterion:cuda()
+   end
 
    -- Put model parameters into contiguous memory
    self.w, self.dE_dw = self.model:getParameters()
@@ -49,10 +56,10 @@ function train:__init(opt)
    return self.prototype
 end
 
-local criterion = nn.MSECriterion()       -- citerion to calculate loss
 
 function train:updateModel()
    local model = self.model
+   local criterion = self.criterion
    local w = self.w
    local dE_dw = self.dE_dw
 
@@ -87,6 +94,11 @@ function train:updateModel()
    res = res / 2
    H0[2] = torch.zeros(channels[L+1], res, res)                -- RL+1
 
+   if self.dev == 'cuda' then
+      for l = 2, 3*L+2 do
+         H0[l] = H0[l]:cuda()
+      end
+   end
 
    for itr = 1, dataSize do
       xlua.progress(itr, dataSize)
@@ -99,7 +111,16 @@ function train:updateModel()
       local h = {}
       local prediction = xSeq:clone()
 
+      if self.dev == 'cuda' then
+         prediction = prediction:cuda()
+         xSeq = xSeq:cuda()
+         H0[1] = H0[1]:cuda()
+      end
+
       local eval_E = function()
+--------------------------------------------------------------------------------
+         -- Forward pass
+--------------------------------------------------------------------------------
          -- Output is table of all predictions
          h = model:forward(H0)
          -- Merge all the predictions into a batch from 2 -> LAST sequence
@@ -114,7 +135,9 @@ function train:updateModel()
          -- Reset gradParameters
          model:zeroGradParameters()
 
+--------------------------------------------------------------------------------
          -- Backward pass
+--------------------------------------------------------------------------------
          local dE_dh = criterion:backward(prediction, xSeq)
 
          -- model:backward() expects dE_dh to be a table of sequence length
@@ -128,8 +151,10 @@ function train:updateModel()
 
          model:backward(H0, dE_dhTable)
 
-         self.dispWin = image.display{image={xSeq[seq][1], prediction[seq]},
-                                      legend='Real | Pred', win = self.dispWin}
+         if self.disp then
+            self.dispWin = image.display{image={xSeq[seq][1], prediction[seq]},
+                                         legend='Real | Pred', win = self.dispWin}
+         end
 
          return err, dE_dw
       end

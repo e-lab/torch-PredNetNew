@@ -13,6 +13,11 @@ torch.setdefaulttensortype('torch.FloatTensor')
 local opts = require 'opts'
 local opt = opts.parse(arg)
 
+if opt.dev == 'cuda' then
+   require 'cunn'
+   require 'cudnn'
+end
+
 torch.manualSeed(opt.seed)
 
 local prednet = require 'prednet'
@@ -36,10 +41,20 @@ logger = optim.Logger('error.log')
 logger:setNames{'Training Error', 'Interframe Training Error'}
 
 print("\nTRAINING\n")
+local prevTrainError = 10000
+
 for epoch = 1, opt.nEpochs do
    print("Epoch: ", epoch)
    local trainError, interFrameError = train:updateModel()
    logger:add{trainError, interFrameError}
    logger:style{'+-', '+-'}
    logger:plot()
+
+   -- Save the trained model
+   if prevTrainError > trainError then
+      local saveLocation = opt.save .. 'mode.net'
+      prototype:evaluate()
+      torch.save(saveLocation, prototype)
+      prevTrainError = trainError
+   end
 end

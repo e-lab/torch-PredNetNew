@@ -15,6 +15,7 @@ function prednet:__init(opt)
    self.seq = opt.seq
    self.res = opt.res
    self.vis = opt.vis
+   self.dev = opt.dev
 end
 
 -- Macros
@@ -194,8 +195,8 @@ local function stackBlocks(L, channels, vis)
                :annotate{name = 'LSTM ' .. l,
                 graphAttributes = gaR}
 
-      outputs[3*l-1] = (lstm - nn.SelectTable(1))    -- Cell State
-      outputs[3*l]   = (lstm - nn.SelectTable(2))    -- Hidden state
+      outputs[3*l-1] = (lstm - nn.SelectTable(1))                    -- Cell State
+      outputs[3*l]   = (lstm - nn.SelectTable(2))                    -- Hidden state
    end
 
 --------------------------------------------------------------------------------
@@ -210,16 +211,19 @@ local function stackBlocks(L, channels, vis)
                       - block(l, L, oChannel, oChannel, vis))
                        :annotate{name = '{E / Ah}: ' .. l,
                         graphAttributes = gaE}
+
          local E, Ah = E_Ah:split(2)
+
          outputs[3*l+1] = E:annotate{name = 'E: ' .. l,
                             graphAttributes = {
                             style = 'filled',
                             fillcolor = 'hotpink'}}
+
          outputs[1] = Ah:annotate{name = 'Prediction',
                          graphAttributes = gaAh}
       else                    -- Rest of the blocks have only E as output
-                              -- El-1,           Rl
          local iChannel = 2 * channels[l-1]
+                              -- El-1,           Rl/Hl
          outputs[3*l+1] = ({outputs[3*(l-1)+1], outputs[3*l]}
                           - block(l, L, iChannel, oChannel, vis))
                            :annotate{name = 'E: ' .. l,
@@ -239,6 +243,10 @@ function prednet:getModel()
 
    local prototype = stackBlocks(L, channels, vis)
 
+   if self.dev == 'cuda' then
+      prototype:cuda()
+   end
+
    local clones = {}
    for i = 1, seq do
       clones[i] = prototype:clone('weight', 'bias', 'gradWeight', 'gradBias')
@@ -254,10 +262,13 @@ function prednet:getModel()
    for l = 1, 3*L do
       -- for annotation
       local styleColor = 'lightpink'
-      local nodeName = 'E Sequence(1), Layer(' .. tostring(math.ceil(l/2)) .. ')'
-      if l % 2 == 0 then
+      local nodeName = 'E Sequence(' .. seq .. '), Layer(' .. math.ceil(l/3) .. ')'
+      if l % 3 == 2 then
          styleColor = 'springgreen'
-         nodeName = 'R Sequence(1), Layer(' .. tostring(l/2) .. ')'
+         nodeName = 'C Sequence(' .. seq .. '), Layer(' .. ((l+1)/3) .. ')'
+      elseif l % 3 == 0 then
+         styleColor = 'burlywood'
+         nodeName = 'H Sequence(' .. seq .. '), Layer(' .. (l/3) .. ')'
       end
 
       -- Link being created between input states to hidden states
@@ -296,10 +307,13 @@ function prednet:getModel()
       if i < seq then
          for l = 1, 3*L do
             local styleColor = 'lightpink'
-            local nodeName = 'E Sequence(' .. tostring(seq) .. '), Layer(' .. tostring(math.ceil(l/2)) .. ')'
+            local nodeName = 'E Sequence(' .. seq .. '), Layer(' .. math.ceil(l/3) .. ')'
             if l % 3 == 2 then
                styleColor = 'springgreen'
-               nodeName = 'R Sequence(' .. tostring(seq) .. '), Layer(' .. tostring((l+1)/3) .. ')'
+               nodeName = 'C Sequence(' .. seq .. '), Layer(' .. ((l+1)/3) .. ')'
+            elseif l % 3 == 0 then
+               styleColor = 'burlywood'
+               nodeName = 'H Sequence(' .. seq .. '), Layer(' .. (l/3) .. ')'
             end
 
             H[l] = nn.SelectTable(l+1)(tempStates)     -- Pass state values to next sequence
@@ -315,12 +329,12 @@ function prednet:getModel()
 
    if vis then
       -- If you want to view tensor dimensions then uncomment these lines
-      local dummyX = getInput(seq, res, L, channels, 1)
-      local o = prototype:forward(dummyX)
+      -- local dummyX = getInput(seq, res, L, channels, 1)
+      -- local o = prototype:forward(dummyX)
       graph.dot(prototype.fg, 'PredNet Model', 'graphs/predNet')
 
-      dummyX = getInput(seq, res, L, channels, 2)
-      o = g:forward(dummyX)
+      -- dummyX = getInput(seq, res, L, channels, 2)
+      -- o = g:forward(dummyX)
       graph.dot(g.fg, 'PredNet for whole sequence', 'graphs/wholeModel')
    end
 
