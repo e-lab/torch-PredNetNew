@@ -87,8 +87,10 @@ local img, imgGPU
 
 local function main()
    for itr = 1, dataset:size(1) do
-      local H0 = {}
       local res = dataset:size(5)
+
+      -- Initial states
+      local H0 = {}
       H0[3] = torch.zeros(channels[1], res, res)                  -- C1[0]
       H0[4] = torch.zeros(channels[1], res, res)                  -- H1[0]
       H0[5] = torch.zeros(2*channels[1], res, res)                -- E1[0]
@@ -102,12 +104,14 @@ local function main()
       res = res / 2
       H0[2] = torch.zeros(channels[L+1], res, res)                -- RL+1
 
+      -- Convert states into CudaTensors if device is cuda
       if opt.dev == 'cuda' then
          for l = 2, 3*L+2 do
             H0[l] = H0[l]:cuda()
          end
       end
 
+      local seqOfFrames = {}
       for seq = 1, dataset:size(2) do
          -- Input frame should be 3 dimensional
          -- channel x height x width
@@ -127,10 +131,11 @@ local function main()
             H0[l+1] = h[l]
          end
 
-         local predictedFrame = h[1]
-
-         win = image.display{image = predictedFrame,legend = 'Predicted Frame', win = win}
+         seqOfFrames[seq] = img:clone()
+         seqOfFrames[seq+dataset:size(2)] = h[1]:clone()
       end
+      win = image.display{image = seqOfFrames, legend = 'Original Frames / Predicted Frames', nrow = 20, win = win}
+      io.read()
    end
 end
 
