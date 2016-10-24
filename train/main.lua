@@ -52,7 +52,7 @@ for epoch = 1, opt.nEpochs do
 
    -- Save the trained model
    if prevTrainError > trainError then
-      local saveLocation = opt.save .. 'mode.net'
+      local saveLocation = opt.save .. 'model-' .. epoch .. '.net'
       prototype:evaluate()
       torch.save(saveLocation, prototype)
       prevTrainError = trainError
