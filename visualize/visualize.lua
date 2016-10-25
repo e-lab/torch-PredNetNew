@@ -6,6 +6,7 @@
 require 'nn'
 require 'nngraph'
 require 'image'
+require 'qtwidget'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -82,24 +83,32 @@ end
 
 -- local img = frame.forward(img)
 local dataset = torch.load(opt.input):float()/255                 -- load MNIST
+local res = dataset:size(5)
+
 local img, imgGPU
 
--- Display windows: Input/Predicted image, Error, Representation respectively
-local winImg, winError, winR
+-- Width and height of each window to be displayed
+local mapE = {{   dataset:size(5),                           dataset:size(5)},
+              {20*dataset:size(5), math.ceil(2*channels[2]/20)*dataset:size(5)},
+              {20*dataset:size(5), math.ceil(2*channels[3]/20)*dataset:size(5)}}
 
-winError = {}
+local mapR = {{ 2*dataset:size(5),                           dataset:size(5)},
+              {20*dataset:size(5), math.ceil(channels[2]/20)*dataset:size(5)},
+              {20*dataset:size(5), math.ceil(channels[3]/20)*dataset:size(5)}}
+
+-- Display windows: Input/Predicted image, Error, Representation respectively
+local winImg, winE, winR
+
+winE = {}
 winR = {}
 for l = 1, L do
-   winError[l] = {}
-   winR[l] = {}
+   winE[l] = qtwidget.newwindow(mapE[l][1], mapE[l][2], 'Error: Layer ' .. l)
+   winR[l] = qtwidget.newwindow(mapR[l][1], mapR[l][2], 'Representation: Layer ' .. l)
 end
-
-local winE1, winE2, winE3, winR1, winR2, winR3
 
 local check = 0
 for itr = 1, dataset:size(1) do
-   local res = dataset:size(5)
-
+   res = dataset:size(5)
    -- Initial states
    local H0 = {}
    H0[3] = torch.zeros(channels[1], res, res)                  -- C1[0]
@@ -166,15 +175,10 @@ for itr = 1, dataset:size(1) do
          end
       end
       if seq > 1 then
-         l = 1
-         -- winE1 = image.display{image = errorImg[l], legend = 'Error layer ' .. l, nrow = 20, zoom = 2^(l-1), win = winE1}
-         winR1 = image.display{image = RImg[l], legend = 'Representation layer ' .. l, nrow = 20, zoom = 2^(l-1), win = winR1}
-         l = 2
-         -- winE2 = image.display{image = errorImg[l], legend = 'Error layer ' .. l, nrow = 20, zoom = 2^(l-1), win = winE2}
-         winR2 = image.display{image = RImg[l], legend = 'Representation layer ' .. l, nrow = 20, zoom = 2^(l-1), win = winR2}
-         l = 3
-         -- winE3 = image.display{image = errorImg[l], legend = 'Error layer ' .. l, nrow = 20, zoom = 2^(l-1), win = winE3}
-         winR3 = image.display{image = RImg[l], legend = 'Representation layer ' .. l, nrow = 20, zoom = 2^(l-1), win = winR3}
+         for l = 1, L do
+            image.display{image = errorImg[l], nrow = 20, zoom = 2^(l-1), win = winE[l]}
+            image.display{image = RImg[l], nrow = 20, zoom = 2^(l-1), win = winR[l]}
+         end
          if check == 0 then
             io.read()
             check = 1
