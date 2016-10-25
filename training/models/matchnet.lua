@@ -1,4 +1,4 @@
--- Eugenio Culurciello
+-- Eugenio Culurciello, Sangpil Kim (batch mode added)
 -- August 2016
 -- MatchNet: a model of PredNet from: https://arxiv.org/abs/1605.08104
 -- convLSTM model from SangPil Kim
