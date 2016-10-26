@@ -1,4 +1,5 @@
 #Files
+*.sh
 *.eps
 *.log
 *.dot

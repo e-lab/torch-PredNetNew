@@ -11,7 +11,7 @@ function opts.parse(arg)
    local opt = lapp [[
    Command line options:
    ## Dataset
-   --input        (default /media/video.mp4)    Input folder/file location or cam0 for camera
+   --input        (default /media/tensor.t7)    Input .t7 file location
 
    ## Model
    --dmodel       (default predNet)             model directory name
@@ -24,6 +24,7 @@ function opts.parse(arg)
 
    ## Miscellaneous parameters
    --seed         (default 8)
+   --nrow         (default 5)                   Images in one row
    -v                                           Verbose mode
    ]]
 
