@@ -24,7 +24,9 @@ local prednet = require 'prednet'
 local train = require 'train'
 
 -- Input/Output channels for A of every layer
+-- XXX Change value of channels[1] to # of input image channels
 opt.channels = torch.ones(opt.layers + 1)
+opt.channels[1] = 3
 for l = 2, opt.layers + 1 do
    opt.channels[l] = 2^(l+3)
 end

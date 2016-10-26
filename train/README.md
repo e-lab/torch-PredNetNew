@@ -1,10 +1,9 @@
-# PredNet
+## Training MatchNet
 
-This repository is a `Torch` implementation of the paper [Deep Predictive Coding Networks for Video Prediction and Unsupervised Learning](https://arxiv.org/abs/1605.08104).
-It needs MNIST dataset for training and saves the trained model in location specified by `-save` option.
-
-A example instruction for loading the dataset and visualizing the output, alongwith saving the `graphs` of model is given below.
+After obtaining the dataset compatible for this repo, point `main.lua` to it and run the following command:
 
 ```
-qlua main.lua --datapath /media/HDD1/Datasets2/originalDatasets/MNIST/ --vis --save /media/HDD1/Models/predNet/ --disp --dev cuda
+qlua main.lua --datapath /dataset/tensor.t7 --vis --disp --save /media/matchNet/ --dev cuda
 ```
+
+`vis` and `disp` options are used to save the generated graphs and to display output prediction for every sequence while training respectively.

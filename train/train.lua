@@ -22,21 +22,19 @@ function train:__init(opt)
    -- Dataset parameters
    self.channels = opt.channels
 
-   local dataFile
-   if opt.dataBig then
-      dataFile     = opt.datapath .. '/data-big-train.t7'
-   else
-      dataFile     = opt.datapath .. '/data-small-train.t7'
-   end
-   self.dataset = torch.load(dataFile):float()/255                  -- load MNIST
+   local datapath = opt.datapath
+   self.dataset = torch.load(datapath):float()
    print("Loaded " .. self.dataset:size(1) .. " image sequences")
 
-   self.res = self.dataset:size(4)
-   self.seq = self.dataset:size(2)
-   print("Image resolution: " .. self.res .. " x " .. self.res)
+   self.seq    = self.dataset:size(2)
+   self.height = self.dataset:size(4)
+   self.width  = self.dataset:size(5)
 
-   opt.seq = self.seq
-   opt.res = self.res
+   opt.seq    = self.seq
+   opt.height = self.height
+   opt.width  = self.width
+
+   print("Image resolution: " .. self.height .. " x " .. self.width)
 
    -- Initialize model generator
    prednet:__init(opt)
@@ -70,7 +68,8 @@ function train:updateModel()
    local optimState = self.optimState
    local L = self.layers
    local channels = self.channels
-   local res = self.res
+   local height = self.height
+   local width  = self.width
    local seq = self.seq
 
    local dataSize = self.dataset:size(1)
@@ -81,18 +80,20 @@ function train:updateModel()
    -- Initial state/input of the network
    -- {imageSequence, RL+1, R1, E1, R2, E2, ..., RL, EL}
    local H0 = {}
-   H0[3] = torch.zeros(channels[1], res, res)                  -- C1[0]
-   H0[4] = torch.zeros(channels[1], res, res)                  -- H1[0]
-   H0[5] = torch.zeros(2*channels[1], res, res)                -- E1[0]
+   H0[3] = torch.zeros(channels[1], height, width)                  -- C1[0]
+   H0[4] = torch.zeros(channels[1], height, width)                  -- H1[0]
+   H0[5] = torch.zeros(2*channels[1], height, width)                -- E1[0]
 
    for l = 2, L do
-      res = res / 2
-      H0[3*l]   = torch.zeros(channels[l], res, res)           -- C1[0]
-      H0[3*l+1] = torch.zeros(channels[l], res, res)           -- Hl[0]
-      H0[3*l+2] = torch.zeros(2*channels[l], res, res)         -- El[0]
+      height = height/2
+      width  = width/2
+      H0[3*l]   = torch.zeros(channels[l], height, width)           -- C1[0]
+      H0[3*l+1] = torch.zeros(channels[l], height, width)           -- Hl[0]
+      H0[3*l+2] = torch.zeros(2*channels[l], height, width)         -- El[0]
    end
-   res = res / 2
-   H0[2] = torch.zeros(channels[L+1], res, res)                -- RL+1
+   height = height/2
+   width  = width/2
+   H0[2] = torch.zeros(channels[L+1], height, width)                -- RL+1
 
    if self.dev == 'cuda' then
       for l = 2, 3*L+2 do
@@ -151,8 +152,9 @@ function train:updateModel()
 
          model:backward(H0, dE_dhTable)
 
+         -- Display last prediction of every sequence
          if self.disp then
-            self.dispWin = image.display{image={xSeq[seq][1], prediction[seq]},
+            self.dispWin = image.display{image={xSeq[seq], prediction[seq]},
                                          legend='Real | Pred', win = self.dispWin}
          end
 
