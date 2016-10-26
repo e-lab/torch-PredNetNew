@@ -6,5 +6,7 @@ We are looking forward to further improve this network.
 Folder description:
 
 1. [train](train): Training the model
-2. [visualize](visualize): Visualize the predicted output alongwith different states of the saved model
 3. [utils](utils): Contains utility script such as one for preparing dataset for training
+2. [visualize](visualize): Visualize the predicted output alongwith different states of the saved model
+
+First generate dataset compatible for this repository using [utils](utils), then [train](train) the network, and then use [visualization](visualize) tool to see the trained network's representation.
