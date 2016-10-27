@@ -16,6 +16,7 @@ function prednet:__init(opt)
    self.width  = opt.width
    self.saveGraph = opt.saveGraph
    self.dev = opt.dev
+   if self.saveGraph then paths.mkdir('graphs') end
 end
 
 -- Macros
