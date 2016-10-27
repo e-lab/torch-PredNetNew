@@ -9,7 +9,7 @@ local save = './highway08.t7'
 -- Specify desired height and width of the dataset as well as the sequence length
 local height = 128
 local width = 256
-local seqLength = 5
+local seqLength = 10
 
 local camRes = 'QHD'
 local fps = 30
@@ -73,7 +73,7 @@ while img do
 end
 
 print("Conversion from video to tensor completed.")
-print("\n# of frames in videos are: " .. frameSeq:size(1))
+print("\n# of chunks created: " .. frameSeq:size(1))
 print("Frame resolution is " .. height .. ' x ' .. width)
 print("\nSaving tensor to location: " .. save)
 torch.save(save, frameSeq)
