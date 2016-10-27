@@ -10,8 +10,8 @@ function train:__init(opt)
    -- Model parameter
    self.layers = opt.layers
 
-   self.dev = opt.dev
-   self.disp = opt.disp
+   self.dev     = opt.dev
+   self.display = opt.display
 
    -- Optimizer parameter
    self.optimState = {learningRate      = opt.learningRate,
@@ -153,7 +153,7 @@ function train:updateModel()
          model:backward(H0, dE_dhTable)
 
          -- Display last prediction of every sequence
-         if self.disp then
+         if self.display then
             self.dispWin = image.display{image={xSeq[seq], prediction[seq]},
                                          legend='Real | Pred', win = self.dispWin}
          end
