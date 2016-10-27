@@ -15,7 +15,7 @@ function opts.parse(arg)
    --nEpochs      (default 100)
 
    ## Dataset
-   --datapath     (default /media/)
+   --datapath     (default /media/tensor.t7)
 
    ## Model
    --layers       (default 3)          number of layers in the model
@@ -23,7 +23,7 @@ function opts.parse(arg)
    --save         (default /media/)    save model at this location
 
    ## Graph
-   --vis                               save the graphs
+   --saveGraph                         save the graphs
 
    ## Device
    --dev          (default cuda)       Device to be used: cpu/cuda
@@ -31,7 +31,7 @@ function opts.parse(arg)
 
    ## Miscellaneous parameters
    --seed         (default 8)
-   --disp                              Display the output
+   --display                           Display predictions while training/plots
    ]]
 
    return opt

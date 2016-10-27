@@ -40,23 +40,24 @@ local prototype = train:__init(opt)
 
 -- Logger
 logger = optim.Logger('error.log')
-logger:setNames{'Training Error', 'Interframe Training Error'}
+logger:setNames{'Prediction Error', 'Replica Error'}
+logger:display(opt.display)
 
 print("\nTRAINING\n")
 local prevTrainError = 10000
 
 for epoch = 1, opt.nEpochs do
    print("Epoch: ", epoch)
-   local trainError, interFrameError = train:updateModel()
-   logger:add{trainError, interFrameError}
+   local predError, replicaError = train:updateModel()
+   logger:add{predError, replicaError}
    logger:style{'+-', '+-'}
    logger:plot()
 
    -- Save the trained model
-   if prevTrainError > trainError then
+   if replicaError > predError then
       local saveLocation = opt.save .. 'model-' .. epoch .. '.net'
       prototype:evaluate()
       torch.save(saveLocation, prototype)
-      prevTrainError = trainError
+      prevTrainError = predError
    end
 end

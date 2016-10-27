@@ -5,7 +5,6 @@ require 'nngraph'
 -- nngraph.setDebug(true)
 
 -- included local packages
-local RNN = require 'RNN'
 local convLSTM = require 'convLSTM'
 
 function prednet:__init(opt)
@@ -15,7 +14,7 @@ function prednet:__init(opt)
    self.seq = opt.seq
    self.height = opt.height
    self.width  = opt.width
-   self.vis = opt.vis
+   self.saveGraph = opt.saveGraph
    self.dev = opt.dev
 end
 
@@ -249,7 +248,7 @@ function prednet:getModel()
    local width  = self.width
    local L = self.layers
    local channels = self.channels
-   local vis = self.vis
+   local vis = self.saveGraph
 
    local prototype = stackBlocks(L, channels, vis)
 
