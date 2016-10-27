@@ -57,6 +57,7 @@ for epoch = 1, opt.nEpochs do
    if replicaError > predError then
       local saveLocation = opt.save .. 'model-' .. epoch .. '.net'
       prototype:evaluate()
+      paths.mkdir(opt.save)
       torch.save(saveLocation, prototype)
       prevTrainError = predError
    end
