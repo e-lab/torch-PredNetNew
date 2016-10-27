@@ -3,7 +3,7 @@
 After obtaining the dataset compatible for this repo, point `main.lua` to it and run the following command:
 
 ```
-qlua main.lua --datapath /dataset/tensor.t7 --vis --disp --save /media/matchNet/ --dev cuda
+qlua main.lua --datapath /dataset/tensor.t7 --saveGraph --display --save /media/matchNet/ --dev cuda
 ```
 
-`vis` and `disp` options are used to save the generated graphs and to display output prediction for every sequence while training respectively.
+`saveGraph` and `display` options are used to save the generated graphs and to display output prediction for every sequence while training respectively.
