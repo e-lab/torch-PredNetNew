@@ -21,8 +21,6 @@ function G:__init(opt)
          table.insert(self.nFilters, (i-1)*32)
       end
    end
-end
-function G:getModel()
    local clOpt = {}
    clOpt['nSeq'] = self.nSeq
    clOpt['kw'] = 3
@@ -31,16 +29,19 @@ function G:getModel()
    clOpt['pa'] = self.padding
    clOpt['dropOut'] = 0
    clOpt['lm'] = self.lstmLayers
+   self.clOpt = clOpt
+end
+function G:getModel()
 
    -- instantiate MatchNet:
-   local unit = MatchNet(self.nlayers, self.stride, self.poolsize, self.nFilters, clOpt, false, self.batch) -- false testing mode
+   local unit = MatchNet(self.nlayers, self.stride, self.poolsize, self.nFilters, self.clOpt, false, self.batch) -- false testing mode
    -- nngraph.annotateNodes()
    -- graph.dot(unit.fg, 'MatchNet-unit','Model-unit') -- graph the model!
 
    -- clone model through time-steps:
    local clones = {}
    for i = 1, self.nSeq do
-      if i == 1 then
+      if i == 1 and not self.modelKeep then
          clones[i] = unit:clone()
       else
          clones[i] = unit:clone('weight','bias','gradWeight','gradBias')
@@ -49,8 +50,8 @@ function G:getModel()
 
    -- create model by connecting clones outputs and setting up global input:
    -- inspired by: http://kbullaughey.github.io/lstm-play/rnn/
-   local E, C, H, E0, C0, H0, tUnit, P, xii, uInputs, eCon, pCon
-   E={} C={} H={} E0={} C0={} H0={} P={} eCon={} pCon={}
+   local E, C, H, E0, C0, H0, tUnit, P, xii, uInputs, eCon, cellCon, hiddenCon, pCon
+   E={} C={} H={} E0={} C0={} H0={} P={} eCon={} cellCon={} hiddenCon={} pCon={}
    -- initialize inputs:
    local xi = nn.Identity()()
    for L=1, self.nlayers do
@@ -81,19 +82,26 @@ function G:getModel()
             C[L] = { tUnit } - nn.SelectTable(4*L-2,4*L-2) -- connect output R to same layer E of next clone
             H[L] = { tUnit } - nn.SelectTable(4*L-1,4*L-1) -- connect output R to same layer E of next clone
             if L == 1 then
-               table.insert(eCon, E[L]) -- connect output E to prev E of next clone
+               table.insert(eCon, E[L])
             end
          else
-            if L == 1  then
+            E[L] = { tUnit } - nn.SelectTable(4*L-3,4*L-3) -- connect output E to prev E of next clone
+            C[L] = { tUnit } - nn.SelectTable(4*L-2,4*L-2) -- connect output R to same layer E of next clone
+            H[L] = { tUnit } - nn.SelectTable(4*L-1,4*L-1) -- connect output R to same layer E of next clone
+            if L == 1 then
                P[L] = { tUnit } - nn.SelectTable(4*L,4*L) -- select Ah output as output of network
-               E[L] = { tUnit } - nn.SelectTable(4*L-3,4*L-3) -- connect output E to prev E of next clone
                table.insert(pCon, P[L])
-               table.insert(eCon, E[L]) -- connect output E to prev E of next clone
+            end
+            table.insert(eCon, E[L])
+            if self.modelKeep then
+               table.insert(cellCon, C[L]) -- connect output E to prev E of next clone
+               table.insert(hiddenCon, H[L]) -- connect output E to prev E of next clone
             end
          end
       end
    end
-   local inputs, outputs = {} , {}
+   local inputs = {}
+   local outputs = {}
    for L=1, self.nlayers do
       table.insert(inputs, E0[L])
       table.insert(inputs, C0[L])
@@ -107,10 +115,15 @@ function G:getModel()
    end
    putTable(pCon,outputs)
    putTable(eCon,outputs)
+   if self.modelKeep then
+      putTable(cellCon,outputs)
+      putTable(hiddenCon,outputs)
+   end
    local model = nn.gModule(inputs, outputs ) -- output is P_layer_1 (prediction / Ah)
    if self.useGPU then
       model:cuda()
    end
-   return model
+   local models = {model,unit}
+   return models
 end
 return G

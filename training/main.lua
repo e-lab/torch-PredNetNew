@@ -32,13 +32,7 @@ print('Keep mode?' ,opt.modelKeep)
 local U = require 'misc/util'
 local loader = require 'misc/data'
 local atari  = require 'misc/atari'
-local M
-if opt.modelKeep then
-   print('Keep mode')
-   M = require 'models/modelKeep'
-else
-   M = require 'models/model'
-end
+local M = require 'models/model'
 local Tr= require 'train'
 local Te= require 'test'
 
@@ -47,15 +41,15 @@ local initM = M(opt)
 local tr    = Tr(opt)
 local te
 if not opt.trainOnly then te = Te(opt) end
-local model = initM:getModel()
+local models = initM:getModel()
 
 local function main()
    if not opt.atari then
    end
    --Main loop
    for epoch = 1 , opt.maxEpochs do
-      tr:train(util, epoch, model)
-      if not opt.trainOnly then te:test(util, epoch, model) end
+      tr:train(util, epoch, models)
+      if not opt.trainOnly then te:test(util, epoch, models[1]) end
       collectgarbage()
    end
 end

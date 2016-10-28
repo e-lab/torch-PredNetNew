@@ -23,9 +23,10 @@ function Tr:__init(opt)
      weightDecay = opt.weightDecay
    }
 end
-function Tr:train(util, epoch, model)
+function Tr:train(util, epoch, models)
    print('==> training model')
    print  ('Loaded ' .. self.datasetSeq:size() .. ' images')
+   local model = models[1]
    model:training()
    local w, dE_dw = model:getParameters()
    print('Number of parameters ' .. w:nElement())
@@ -97,7 +98,8 @@ function Tr:train(util, epoch, model)
    if self.prevLoss > loss then self.prevLoss = loss end
    -- Save model
    if math.fmod(epoch, util.saveEpoch) == 0 and self.prevLoss == loss then
-      util:saveM(model, self.optimState, epoch)
+      --Only save unit model
+      util:saveM(models[2], self.optimState, epoch)
    end
    --Average errors
    --Batch is not divided since it is calcuated already in criterion
