@@ -44,8 +44,6 @@ if not opt.trainOnly then te = Te(opt) end
 local models = initM:getModel()
 
 local function main()
-   if not opt.atari then
-   end
    --Main loop
    for epoch = 1 , opt.maxEpochs do
       tr:train(util, epoch, models)
