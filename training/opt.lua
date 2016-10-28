@@ -16,7 +16,7 @@ function o.parse(arg)
 
      Training parameters:
      -r,--learningRate       (default 1e-3)  learning rate
-     -c,--channel            (default 3)     channel of data
+     -c,--channel            (default 1)     channel of data
      -d,--learningRateDecay  (default 0)     learning rate decay
      -w,--weightDecay        (default 0)     L2 penalty on the weights
      -m,--momentum           (default 0.9)   momentum parameter
