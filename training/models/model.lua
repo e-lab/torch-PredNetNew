@@ -86,14 +86,14 @@ function G:getModel()
             end
          else
             E[L] = { tUnit } - nn.SelectTable(4*L-3,4*L-3) -- connect output E to prev E of next clone
-            C[L] = { tUnit } - nn.SelectTable(4*L-2,4*L-2) -- connect output R to same layer E of next clone
-            H[L] = { tUnit } - nn.SelectTable(4*L-1,4*L-1) -- connect output R to same layer E of next clone
             if L == 1 then
                P[L] = { tUnit } - nn.SelectTable(4*L,4*L) -- select Ah output as output of network
                table.insert(pCon, P[L])
             end
             table.insert(eCon, E[L])
             if self.modelKeep then
+               C[L] = { tUnit } - nn.SelectTable(4*L-2,4*L-2) -- connect output R to same layer E of next clone
+               H[L] = { tUnit } - nn.SelectTable(4*L-1,4*L-1) -- connect output R to same layer E of next clone
                table.insert(cellCon, C[L]) -- connect output E to prev E of next clone
                table.insert(hiddenCon, H[L]) -- connect output E to prev E of next clone
             end
