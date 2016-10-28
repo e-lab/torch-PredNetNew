@@ -14,7 +14,8 @@ function convLSTM(inDim, outDim, opt)
   local dropout = opt.dropOut or 0
   local kw, kh  = opt.kw, opt.kh
   local stw, sth = opt.st, opt.st
-  local paw, pah = opt.pa, opt.pa
+  local paw = math.ceil(stw / 2)
+  local pah = math.ceil(sth / 2)
   local n = opt.lm
   -- Input  is 1+ 2*#Layer
   -- Output is 1+ 2*#Layer

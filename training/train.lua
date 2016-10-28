@@ -3,7 +3,17 @@
 -------------------------------------------------------------------------------
 local class = require 'class'
 local Tr = class('Tr')
+require 'paths'
 function Tr:__init(opt)
+   local loader
+   if opt.atari then
+      loader = require 'misc/atari'
+   else
+      loader = require 'misc/data'
+   end
+   print('Loading data...')
+   self.datasetSeq = loader.getdataSeq(paths.concat(opt.dataDir,opt.dataName..'-train.t7'),opt) -- we sample nSeq consecutive frames
+   self.trainLog = optim.Logger(paths.concat(opt.savedir,'train.log'))
    self.prevLoss = 1e10
    --Init selfimState
    self.optimState = {
@@ -13,11 +23,9 @@ function Tr:__init(opt)
      weightDecay = opt.weightDecay
    }
 end
-function Tr:train(util,datasetSeq, epoch, trainLog, models)
-
+function Tr:train(util, epoch, model)
    print('==> training model')
-   print  ('Loaded ' .. datasetSeq:size() .. ' images')
-   model = models[1]
+   print  ('Loaded ' .. self.datasetSeq:size() .. ' images')
    model:training()
    local w, dE_dw = model:getParameters()
    print('Number of parameters ' .. w:nElement())
@@ -29,25 +37,41 @@ function Tr:train(util,datasetSeq, epoch, trainLog, models)
 
    local iteartion
    if util.iteration == 0 then
-      iteration = datasetSeq:size()/util.batch
+      iteration = self.datasetSeq:size()/util.batch
    else
       iteration = util.iteration
    end
+   local output
    for t = 1, iteration do
       xlua.progress(t, iteration)
       -- define eval closure
       local eval_E = function(w)
 
          model:zeroGradParameters()
-         local sample = datasetSeq[t]
-         local inTableG0, targetC, targetF = util:prepareData(sample)
+         local sample = self.datasetSeq[t]
+         local inTableG0, targetC, targetF
+         if util.modelKeep and t ~= 1 then
+            inTableG0, targetC, targetF = util:prepareDataKeep(sample,output)
+         else
+            inTableG0, targetC, targetF = util:prepareData(sample)
+         end
+         --[[
+         print('E sum',inTableG0[1]:sum())
+         print('C sum',inTableG0[2]:sum())
+         print('H sum',inTableG0[3]:sum())
+         --]]
          --Get output
          -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
-         local output = model:forward(inTableG0)
+         output = model:forward(inTableG0)
          -- Criterion is embedded
          -- estimate f and gradients
          -- Update Grad input
-         local dE_dy = util:prepareDedw(output, targetF)
+         local dE_dy
+         if self.modelKeep then
+            dE_dy = util:prepareDedwKeep(output, targetF)
+         else
+            dE_dy = util:prepareDedw(output, targetF)
+         end
          model:backward(inTableG0,dE_dy)
 
          -- Display and Save picts
@@ -73,14 +97,14 @@ function Tr:train(util,datasetSeq, epoch, trainLog, models)
    if self.prevLoss > loss then self.prevLoss = loss end
    -- Save model
    if math.fmod(epoch, util.saveEpoch) == 0 and self.prevLoss == loss then
-      util:saveM(models[2], self.optimState, epoch)
+      util:saveM(model, self.optimState, epoch)
    end
    --Average errors
    --Batch is not divided since it is calcuated already in criterion
    cerr = cerr/iteration/util.batch
    ferr = ferr/iteration/util.batch
    loss = loss/iteration/util.batch
-   util:writLog(cerr,ferr,loss,trainLog)
+   util:writLog(cerr,ferr,loss,self.trainLog)
    print('Learning Rate: ', self.optimState.learningRate)
    print ('Training completed!')
 end

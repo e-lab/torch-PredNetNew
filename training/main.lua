@@ -21,33 +21,41 @@ torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(opt.seed)
 os.execute('mkdir '..opt.savedir)
 torch.save(paths.concat(opt.savedir,'opt.t7'),opt)
+print(opt)
 print('Using GPU?', opt.useGPU)
+print('GPU id?', opt.gpuId)
+print('Batch size?', opt.batch)
 print('How many layers?' ,opt.nlayers)
+print('Keep mode?' ,opt.modelKeep)
 
 --Call files
 local U = require 'misc/util'
-local loader = require 'misc/data.lua'
-local M = require 'models/model'
+local loader = require 'misc/data'
+local atari  = require 'misc/atari'
+local M
+if opt.modelKeep then
+   print('Keep mode')
+   M = require 'models/modelKeep'
+else
+   M = require 'models/model'
+end
 local Tr= require 'train'
 local Te= require 'test'
 
-local util = U(opt)
+local util  = U(opt)
 local initM = M(opt)
 local tr    = Tr(opt)
-local te    =Te(opt)
+local te
+if not opt.trainOnly then te = Te(opt) end
 local model = initM:getModel()
 
 local function main()
-   print('Loading data...')
-   local dataFile, dataFileTest = loader.loadData(opt.dataBig)
-   local datasetSeq = loader.getdataSeq(dataFile,opt) -- we sample nSeq consecutive frames
-   local testDatasetSeq = loader.getdataSeq(dataFileTest,opt) -- we sample nSeq consecutive frames
-   local trainLog = optim.Logger(paths.concat(opt.savedir,'train.log'))
-   local testLog = optim.Logger(paths.concat(opt.savedir,'test.log'))
+   if not opt.atari then
+   end
    --Main loop
    for epoch = 1 , opt.maxEpochs do
-      tr:train(util, datasetSeq, epoch, trainLog, model)
-      te:test(util, testDatasetSeq, epoch, testLog, model[1])
+      tr:train(util, epoch, model)
+      if not opt.trainOnly then te:test(util, epoch, model) end
       collectgarbage()
    end
 end

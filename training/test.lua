@@ -3,13 +3,25 @@
 -------------------------------------------------------------------------------
 local class = require 'class'
 local Te = class('Te')
-function Te:test(util,datasetSeq,epoch,testLog,model)
+require 'paths'
+function Te:__init(opt)
+   local loader
+   if opt.atari then
+      loader = require 'misc/atari'
+   else
+      loader = require 'misc/data'
+   end
+   print('Loading data...')
+   self.datasetSeq = loader.getdataSeq(paths.concat(opt.dataDir,opt.dataName..'-test.t7'),opt) -- we sample nSeq consecutive frames
+   self.testLog = optim.Logger(paths.concat(opt.savedir,'test.log'))
+end
+function Te:test(util, epoch, model)
    if util.useGPU then
       require 'cunn'
       require 'cutorch'
    end
    print('==> training model')
-   print  ('Loaded ' .. datasetSeq:size() .. ' images')
+   print  ('Loaded ' .. self.datasetSeq:size() .. ' images')
    model:evaluate()
 
    local cerr, ferr, loss = 0, 0, 0
@@ -19,13 +31,13 @@ function Te:test(util,datasetSeq,epoch,testLog,model)
 
    local iteration
    if util.iteration == 0 then
-      iteration = datasetSeq:size()/util.batch
+      iteration = self.datasetSeq:size()/util.batch
    else
       iteration = util.iteration
    end
    for t = 1, iteration do
       xlua.progress(t, iteration)
-      local sample = datasetSeq[t]
+      local sample = self.datasetSeq[t]
       local inTableG0, targetC, targetF = util:prepareData(sample)
       --Get output
       -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
@@ -50,7 +62,7 @@ function Te:test(util,datasetSeq,epoch,testLog,model)
    cerr = cerr/iteration/util.batch
    ferr = ferr/iteration/util.batch
    loss = loss/iteration/util.batch
-   util:writLog(cerr,ferr,loss,testLog)
+   util:writLog(cerr,ferr,loss,self.testLog)
    print ('Validation completed!')
 end
 

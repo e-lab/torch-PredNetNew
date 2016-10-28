@@ -1,3 +1,6 @@
+-- SangPil Kim, Eugenio Culurciello
+-- August - September 2016
+-------------------------------------------------------------------------------
 local o = {}
 function o.parse(arg)
    local lapp = require 'pl.lapp'
@@ -5,19 +8,23 @@ function o.parse(arg)
      Command line options:
      --seed                (default 1250)     initial random seed
      --useGPU                                 use GPU in training
-     --GPUID               (default 2)        select GPU
+     --gpuId               (default 1)        select GPU
      Data parameters:
-     --dataBig                                use large dataset or reduced one
+     --dataDir             (default dataSets)  Dataset dirs
+     --dataName            (default data-small) Dataset name
+     --atari                                 Use atari
 
      Training parameters:
      -r,--learningRate       (default 1e-3)  learning rate
+     -c,--channel            (default 3)     channel of data
      -d,--learningRateDecay  (default 0)     learning rate decay
      -w,--weightDecay        (default 0)     L2 penalty on the weights
      -m,--momentum           (default 0.9)   momentum parameter
      --maxEpochs             (default 100)   max number of training epochs
      --iteration             (default 0)     like to set own iteration default dataSize
      --batch                 (default 10)    batch size
-     --clampSize             (default 5)     clamp size
+     --trainOnly                             Train only if true
+     --modelKeep                             Long video
 
      Save options:
      --savedir         (default './results') subdirectory to save experiments in
