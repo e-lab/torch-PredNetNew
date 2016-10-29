@@ -204,8 +204,8 @@ function util:prepareDataKeep(sample,output)
    return inTableG0, targetC, targetF
 end
 
-function util:show(seqTable,targetF,targetC,output, flag)
-   if self.display then
+function util:show(seqTable,targetF,targetC,output, flag, index)
+   if self.display or self.visOnly then
       if flag == 'train' then
         legend = 'Train: t-3, t-2, t-1, Target, Prediction'
       else
@@ -213,6 +213,8 @@ function util:show(seqTable,targetF,targetC,output, flag)
       end
       require 'env'
       local pic
+      local index = index or 1
+      local output = output[index]
       if self.batch == 1 then
          pic = { seqTable[#seqTable-2]:squeeze(),
                           seqTable[#seqTable-2]:squeeze(),

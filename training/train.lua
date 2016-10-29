@@ -1,9 +1,9 @@
 -- SangPil Kim, Eugenio Culurciello
 -- August - September 2016
 -------------------------------------------------------------------------------
+require 'paths'
 local class = require 'class'
 local Tr = class('Tr')
-require 'paths'
 function Tr:__init(opt)
    local loader
    if opt.atari then
@@ -11,7 +11,7 @@ function Tr:__init(opt)
    else
       loader = require 'misc/data'
    end
-   print('Loading data...')
+   print('Loading train data...')
    self.datasetSeq = loader.getdataSeq(paths.concat(opt.dataDir,opt.dataName..'-train.t7'),opt) -- we sample nSeq consecutive frames
    self.trainLog = optim.Logger(paths.concat(opt.savedir,'train.log'))
    self.prevLoss = 1e10
@@ -23,12 +23,10 @@ function Tr:__init(opt)
      weightDecay = opt.weightDecay
    }
 end
-function Tr:train(util, epoch, models)
+function Tr:train(util, epoch, protos)
    print('==> training model')
-   print  ('Loaded ' .. self.datasetSeq:size() .. ' images')
-   local model = models[1]
-   model:training()
-   local w, dE_dw = model:getParameters()
+   protos.model:training()
+   local w, dE_dw = protos.model:getParameters()
    print('Number of parameters ' .. w:nElement())
    print('Number of grads ' .. dE_dw:nElement())
 
@@ -38,7 +36,7 @@ function Tr:train(util, epoch, models)
 
    local iteartion
    if util.iteration == 0 then
-      iteration = self.datasetSeq:size()/util.batch
+      iteration = math.floor(self.datasetSeq:size()/util.batch)
    else
       iteration = util.iteration
    end
@@ -48,7 +46,7 @@ function Tr:train(util, epoch, models)
       -- define eval closure
       local eval_E = function(w)
 
-         model:zeroGradParameters()
+         protos.model:zeroGradParameters()
          local sample = self.datasetSeq[t]
          local inTableG0, targetC, targetF
          if util.modelKeep and t ~= 1 then
@@ -63,7 +61,7 @@ function Tr:train(util, epoch, models)
          --]]
          --Get output
          -- 1st term is 1st layer of Ahat 2end term is 1stLayer Error
-         output = model:forward(inTableG0)
+         output = protos.model:forward(inTableG0)
          -- Criterion is embedded
          -- estimate f and gradients
          -- Update Grad input
@@ -73,12 +71,12 @@ function Tr:train(util, epoch, models)
          else
             dE_dy = util:prepareDedw(output, targetF)
          end
-         model:backward(inTableG0,dE_dy)
+         protos.model:backward(inTableG0,dE_dy)
 
          -- Display and Save picts
          if math.fmod(t*util.batch, util.disFreq) == 0 then
             local disFlag = 'train'
-            util:show(inTableG0[#inTableG0], targetF, targetC, output[1], disFlag)
+            util:show(inTableG0[#inTableG0], targetF, targetC, output, disFlag)
             util:saveImg(targetF,output[1],epoch,t, disFlag)
          end
          --Calculate Matric
@@ -99,7 +97,9 @@ function Tr:train(util, epoch, models)
    -- Save model
    if math.fmod(epoch, util.saveEpoch) == 0 and self.prevLoss == loss then
       --Only save unit model
-      util:saveM(models[2], self.optimState, epoch)
+      protos.clone:evaluate()
+      protos.clone:clearState()
+      util:saveM(protos.clone, self.optimState, epoch)
    end
    --Average errors
    --Batch is not divided since it is calcuated already in criterion
