@@ -1,4 +1,4 @@
-# PredNet in Torch7
+# MatchNet in Torch7
 
 A model of [PredNet](https://coxlab.github.io/prednet/) in [Torch7](http://torch.ch/)
 

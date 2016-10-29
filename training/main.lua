@@ -1,7 +1,7 @@
 --Sangpil Kim, Eugenio Culurciello
 -- with help from Alfredo Canziani and Abhishek Chaurasia
 -- August - September 2016
--- PredNet in Torch8 - from: https://arxiv.org/abs/1605.08104
+-- PredNet in Torch7 - from: https://arxiv.org/abs/1605.08104
 --
 -- code training and testing inspired by: https://github.com/viorik/ConvLSTM
 -- download data from: https://www.dropbox.com/sh/fvsqod4uv7yp0dp/AAAHoHUjkXg4mW6OvV91TgaEa?dl=1
