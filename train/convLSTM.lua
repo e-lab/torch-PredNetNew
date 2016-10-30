@@ -50,8 +50,8 @@ function convLSTM:getModel(inDim, outDim)
 
       local h2Ig = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
       local h2Fg = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
-      local h2Og = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevC)
-      local h2It = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevC)
+      local h2Og = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
+      local h2It = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
 
       local ig = nn.CAddTable()({i2Ig, h2Ig})
       local fg = nn.CAddTable()({i2Fg, h2Fg})
