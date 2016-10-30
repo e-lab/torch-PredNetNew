@@ -1,3 +1,9 @@
+*.DS_Store
 *.swp
-*.svg
+*.swo
+*.t7
 *.dot
+*.svg
+*.jpg
+*.jpg
+*.net
