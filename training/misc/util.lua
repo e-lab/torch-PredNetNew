@@ -204,7 +204,7 @@ function util:prepareDataKeep(sample,output)
    return inTableG0, targetC, targetF
 end
 
-function util:show(seqTable,targetF,targetC,output, flag, index)
+function util:show(seqTable,targetF,targetC,output, flag, epoch,t,index)
    if self.display or self.visOnly then
       if flag == 'train' then
         legend = 'Train: t-3, t-2, t-1, Target, Prediction'
@@ -230,6 +230,9 @@ function util:show(seqTable,targetF,targetC,output, flag, index)
       end
       _im1_ = image.display{image=pic, min=0, max=1, win = _im1_, nrow = 7,
                          legend = legend}
+      if self.savePics then
+         image.save(paths.concat(self.savedir ,'pic_target_'..epoch..'_'..tostring(t)..'_'..flag..'.jpg'), _im1_.image)
+      end
    end
 end
 
@@ -242,8 +245,7 @@ function util:saveImg(target,output,epoch,t, disFlag)
          target = target[1]:squeeze()
          output = output[1]:squeeze()
       end
-      image.save(paths.concat(self.savedir ,'pic_target_'..epoch..'_'..t..'_'..disFlag..'.jpg'), target)
-      image.save(paths.concat(self.savedir ,'pic_output_'..epoch..'_'..t..'_'..disFlag..'.jpg'), output)
+      print('')
    end
 end
 

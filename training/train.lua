@@ -74,10 +74,9 @@ function Tr:train(util, epoch, protos)
          protos.model:backward(inTableG0,dE_dy)
 
          -- Display and Save picts
-         if math.fmod(t*util.batch, util.disFreq) == 0 then
+         if math.fmod(t*util.batch, util.picFreq) == 0 then
             local disFlag = 'train'
-            util:show(inTableG0[#inTableG0], targetF, targetC, output, disFlag)
-            util:saveImg(targetF,output[1],epoch,t, disFlag)
+            util:show(inTableG0[#inTableG0], targetF, targetC, output, disFlag,epoch,t,index)
          end
          --Calculate Matric
          -- Calculate Error and sum
