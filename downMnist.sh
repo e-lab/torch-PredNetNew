@@ -13,7 +13,7 @@ unzip data-big-train.t7.zip
 unzip data-small-test.t7.zip
 unzip data-small-train.t7.zip 
 
-rm -rf __MACCOSX
+rm -rf __MACOSX
 rm -rf data-big-test.t7.zip
 rm -rf data-big-train.t7.zip  
 rm -rf data-small-test.t7.zip
