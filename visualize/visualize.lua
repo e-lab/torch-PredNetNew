@@ -15,7 +15,6 @@ local opts = require 'opts'
 local opt = opts.parse(arg)
 
 if opt.dev == 'cuda' then
-   require 'cunn'
    require 'cudnn'
 end
 
@@ -33,16 +32,9 @@ print("Loading model from: " .. modelPath)
 local model = torch.load(modelPath)
 
 -- Change model type based on device being used for demonstration
-if opt.dev:lower() == 'cpu' then
-   cudnn.convert(model, nn)
-   model:float()
-else
+if opt.dev:lower() == 'cuda' then
    model:cuda()
 end
-
--- Set the module mode 'train = false'
-model:evaluate()
-model:clearState()
 
 -- Input/Output channels for A of every layer
 channels = torch.ones(L + 1)
