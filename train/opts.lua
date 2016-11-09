@@ -21,6 +21,7 @@ function opts.parse(arg)
    --layers       (default 3)          number of layers in the model
    --seq          (default 5)          number of sequence to look at
    --save         (default /media/)    save model at this location
+   --srcCh        (default 1)          input channel size
 
    ## Graph
    --saveGraph                         save the graphs

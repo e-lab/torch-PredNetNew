@@ -26,7 +26,7 @@ local train = require 'train'
 -- Input/Output channels for A of every layer
 -- XXX Change value of channels[1] to # of input image channels
 opt.channels = torch.ones(opt.layers + 1)
-opt.channels[1] = 3
+opt.channels[1] = opt.srcCh
 for l = 2, opt.layers + 1 do
    opt.channels[l] = 2^(l+3)
 end
@@ -56,9 +56,9 @@ for epoch = 1, opt.nEpochs do
    -- Save the trained model
    if replicaError > predError then
       local saveLocation = opt.save .. 'model-' .. epoch .. '.net'
-      prototype:evaluate():clearState():float()
+      prototype:evaluate()
       paths.mkdir(opt.save)
-      torch.save(saveLocation, prototype)
+   --   torch.save(saveLocation, prototype)
       prevTrainError = predError
    end
 end
