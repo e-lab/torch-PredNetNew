@@ -2,7 +2,7 @@ local prednet = {}
 
 require 'nngraph'
 
-nngraph.setDebug(true)
+--nngraph.setDebug(true)
 
 -- included local packages
 local convLSTM = require 'convLSTM'
