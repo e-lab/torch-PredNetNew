@@ -11,7 +11,6 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
    local kw, kh  = 3, 3
    local stw, sth = 1, 1
    local paw, pah = 1, 1
-   print(lstmLayer)
    local n = lstmLayer
    -- Input  is 1+ 2*#Layer
    -- Output is 1+ 2*#Layer
