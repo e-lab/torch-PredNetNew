@@ -2,7 +2,7 @@ local prednet = {}
 
 require 'nngraph'
 
--- nngraph.setDebug(true)
+nngraph.setDebug(true)
 
 -- included local packages
 local convLSTM = require 'convLSTM'
@@ -16,6 +16,7 @@ function prednet:__init(opt)
    self.width  = opt.width
    self.saveGraph = opt.saveGraph
    self.dev = opt.dev
+   self.lstmLayer = opt.lstmLayer
    if self.saveGraph then paths.mkdir('graphs') end
 end
 
@@ -141,9 +142,9 @@ local function block(l, L, iChannel, oChannel, vis)
                                  graphAttributes = gaAh}
 
    -- Error between A and A hat
-   local E = ({{A, Ah} - nn.CSubTable(1) - nn.ReLU(),
-              {Ah, A} - nn.CSubTable(1) - nn.ReLU()}
-             - nn.JoinTable(1)):annotate{name = 'E' .. layer,
+   local E = ({{A, Ah} - nn.CSubTable(1,1) - nn.ReLU(),
+              {Ah, A} - nn.CSubTable(1,1) - nn.ReLU()}
+             - nn.JoinTable(2)):annotate{name = 'E' .. layer,
                                 graphAttributes = gaE}
 
    local g
@@ -160,7 +161,7 @@ local function block(l, L, iChannel, oChannel, vis)
    return g
 end
 
-local function stackBlocks(L, channels, vis)
+local function stackBlocks(L, channels, vis, lstmLayer)
    --[[
        L -> Total number of layers
        Input and outputs in time series
@@ -199,15 +200,15 @@ local function stackBlocks(L, channels, vis)
       else
          upR = outputs[3*(l+1)] - nn.SpatialUpSamplingNearest(2)     -- Upsample prev Rl+1
       end
-      R = {upR, inputs[3*l + 2]} - nn.JoinTable(1)
+      R = {upR, inputs[3*l + 2]} - nn.JoinTable(2)
 
       lstm = ({R, inputs[3*l], inputs[3*l+1]}
-              - convLSTM:getModel(channels[l+1] + 2 * channels[l], channels[l]))
+              - convLSTM:getModel(channels[l+1] + 2 * channels[l], channels[l], lstmLayer))
                         :annotate{name = 'LSTM ' .. l,
                                   graphAttributes = gaR}
 
-      outputs[3*l-1] = (lstm - nn.SelectTable(1))                    -- Cell State
-      outputs[3*l]   = (lstm - nn.SelectTable(2))                    -- Hidden state
+      outputs[3*l-1] = (lstm - nn.SelectTable(1,1))                    -- Cell State
+      outputs[3*l]   = (lstm - nn.SelectTable(2,2))                    -- Hidden state
    end
 
 --------------------------------------------------------------------------------
@@ -251,7 +252,7 @@ function prednet:getModel()
    local channels = self.channels
    local vis = self.saveGraph
 
-   local prototype = stackBlocks(L, channels, vis)
+   local prototype = stackBlocks(L, channels, vis, self.lstmLayer)
 
    if self.dev == 'cuda' then
       prototype:cuda()
@@ -289,12 +290,11 @@ function prednet:getModel()
                             fillcolor = styleColor}}
    end
 
-   -- Input sequence needs to be sent as batch
    -- eg for 5 grayscale images your input will be of dimension 5xhxw
    local splitInput = nn.SplitTable(1)(inputSequence)
 
    for i = 1, seq do
-      local inputFrame = nn.SelectTable(i)(splitInput):annotate{name = 'Input Frame #' .. i,
+      local inputFrame = nn.SelectTable(i,i)(splitInput):annotate{name = 'Input Frame #' .. i,
                                                                 graphAttributes = {
                                                                 style = 'filled',
                                                                 fillcolor = 'gold1'}}
@@ -307,7 +307,7 @@ function prednet:getModel()
                                                  fillcolor = 'moccasin'}}
 
       -- Only Ah1 is sent as output
-      outputs[i] = nn.SelectTable(1)(tempStates)       -- Send Ah to output
+      outputs[i] = nn.SelectTable(1,1)(tempStates)       -- Send Ah to output
                                                 :annotate{name = 'Prediction',
                                                           graphAttributes = gaAh}
 
@@ -324,7 +324,7 @@ function prednet:getModel()
                nodeName = 'H Sequence(' .. seq .. '), Layer(' .. (l/3) .. ')'
             end
 
-            H[l] = nn.SelectTable(l+1)(tempStates)     -- Pass state values to next sequence
+            H[l] = nn.SelectTable(l+1,l+1)(tempStates)     -- Pass state values to next sequence
                                                   :annotate{name = nodeName,
                                                    graphAttributes = {
                                                    style = 'filled',
