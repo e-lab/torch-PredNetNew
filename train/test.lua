@@ -1,12 +1,11 @@
-local train = {}
+local test = {}
 
 require 'optim'
 require 'image'
 
 -- local packages
-local prednet = require 'prednet'
 
-function train:__init(opt)
+function test:__init(opt)
    -- Model parameter
    self.layers = opt.layers
 
@@ -23,10 +22,10 @@ function train:__init(opt)
    self.channels = opt.channels
    self.srcCh  = opt.srcCh
 
-   local datapath = opt.datapath
+   local datapath = opt.tdatapath
    self.dataset = torch.load(datapath):float()
    self.dataset = self.dataset/self.dataset:max()
-   print("Loaded " .. self.dataset:size(1) .. " image sequences")
+   print("Loaded testset" .. self.dataset:size(1) .. " image sequences")
 
    self.batch  = opt.batch
    self.seq    = self.dataset:size(2)
@@ -39,35 +38,23 @@ function train:__init(opt)
 
    print("Image resolution: " .. self.height .. " x " .. self.width)
 
-   -- Initialize model generator
-   prednet:__init(opt)
-   -- Get the model unwrapped over time as well as the prototype
-   self.model, self.prototype = prednet:getModel()
    self.criterion = nn.MSECriterion()       -- citerion to calculate loss
 
    if self.dev == 'cuda' then
-      self.model:cuda()
       self.criterion:cuda()
    end
 
-   -- Put model parameters into contiguous memory
-   self.w, self.dE_dw = self.model:getParameters()
-   print("# of parameters " .. self.w:nElement())
-
-   return self.prototype
 end
 
 
-function train:updateModel()
-   local model = self.model
+function test:updateModel(model)
    local criterion = self.criterion
    local w = self.w
    local dE_dw = self.dE_dw
 
-   model:training()                       -- Ensure model is in training mode
+   model:evaluate()                       -- Ensure model is in training mode
 
-   local trainError = 0
-   local interFrameError = 0
+   local testError , err , interFrameError = 0 , 0 , 0
    local optimState = self.optimState
    local L = self.layers
    local channels = self.channels
@@ -104,7 +91,6 @@ function train:updateModel()
          H0[l] = H0[l]:cuda()
       end
    end
-
    for itr = 1, dataSize, batch do
       xlua.progress(itr, dataSize)
 
@@ -127,66 +113,40 @@ function train:updateModel()
          H0[1] = H0[1]:cuda()
       end
 
-      local eval_E = function()
---------------------------------------------------------------------------------
-         -- Forward pass
---------------------------------------------------------------------------------
-         -- Output is table of all predictions
-         h = model:forward(H0)
-         -- Merge all the predictions into a batch from 2 -> LAST sequence
-         --       Table of 2         Batch of 2
-         -- {(64, 64), (64, 64)} -> (2, 64, 64)
-         for i = 2, #h do
-            prediction[i] = h[i]
-         end
-
-         local err = criterion:forward(prediction, xSeq)
-
-         -- Reset gradParameters
-         model:zeroGradParameters()
-
---------------------------------------------------------------------------------
-         -- Backward pass
---------------------------------------------------------------------------------
-         local dE_dh = criterion:backward(prediction, xSeq)
-
-         -- model:backward() expects dE_dh to be a table of sequence length
-         -- Since 1st frame was ignored while calculating error (prediction[1] = xSeq[1]),
-         -- 1st tensor in dE_dhTable is just a zero tensor
-         local dE_dhTable = {}
-         dE_dhTable[1] = dE_dh[1]:clone():zero()
-         for i = 2, seq do
-            dE_dhTable[i] = dE_dh[i]
-         end
-
-         model:backward(H0, dE_dhTable)
-
-         -- Display last prediction of every sequence
-         if self.display then
-            self.dispWin = image.display{image={xSeq[{seq,1,{},{},{}}], prediction[{seq,1,{},{},{}}]},
-                                         legend='Real | Pred', win = self.dispWin}
-         end
-
-         return err, dE_dw
+-----------------------------------------------------------------------------
+      -- Forward pass
+-----------------------------------------------------------------------------
+      -- Output is table of all predictions
+      h = model:forward(H0)
+      -- Merge all the predictions into a batch from 2 -> LAST sequence
+      --       Table of 2         Batch of 2
+      -- {(64, 64), (64, 64)} -> (2, 64, 64)
+      for i = 2, #h do
+         prediction[i] = h[i]
       end
 
-      local err
-      w, err = optim.adam(eval_E, w, optimState)
+      err = criterion:forward(prediction, xSeq)
 
-      trainError = trainError + err[1]
+      -- Display last prediction of every sequence
+      if self.display then
+         self.dispWin = image.display{image={xSeq[{seq,1,{},{},{}}], prediction[{seq,1,{},{},{}}]},
+                                      legend='Real | Pred', win = self.dispWin}
+      end
+
+      testError = testError + err
       interFrameError = interFrameError
                       + criterion:forward(prediction[{{2, seq}}], xSeq[{{1, seq-1}}])
    end
 
    -- Calculate time taken by 1 epoch
    time = sys.clock() - time
-   trainError = trainError/dataSize
+   testError = testError/dataSize
    interFrameError = interFrameError/dataSize
-   print("\nTraining Error: " .. trainError)
+   print("\nTest Error: " .. testError)
    print("Time taken to learn 1 sample: " .. (time*1000/dataSize) .. "ms")
 
    collectgarbage()
-   return trainError, interFrameError
+   return testError, interFrameError
 end
 
-return train
+return test
