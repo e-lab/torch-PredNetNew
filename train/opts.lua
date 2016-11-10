@@ -13,15 +13,20 @@ function opts.parse(arg)
    ## Hyperpatameters
    --lr           (default 0.001)
    --nEpochs      (default 100)
+   --lstmLayer    (default 1)
 
    ## Dataset
    --datapath     (default /media/tensor.t7)
+   --tdatapath     (default /media/tensor.t7)
+   --srcCh        (default 1)          number of input Channel
+   --batch        (default 5)          number of batch size
+   ## Train option
+   --test         Test if needed need to define tdatapath
 
    ## Model
    --layers       (default 3)          number of layers in the model
    --seq          (default 5)          number of sequence to look at
-   --save         (default /media/)    save model at this location
-   --srcCh        (default 1)          input channel size
+   --save         (default ./media/)    save model at this location
 
    ## Graph
    --saveGraph                         save the graphs
