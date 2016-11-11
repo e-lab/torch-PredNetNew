@@ -135,7 +135,7 @@ function test:updateModel(model)
 
       testError = testError + err
       interFrameError = interFrameError
-                      + criterion:forward(prediction[{{2, seq}}], xSeq[{{1, seq-1}}])
+                     + criterion:forward(prediction[{{seq,{},{},{},{}}}], xSeq[{{seq-1,{},{},{},{}}}] )
    end
 
    -- Calculate time taken by 1 epoch
