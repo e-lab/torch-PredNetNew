@@ -4,3 +4,8 @@ This script converts a video file into a .t7 file compatible as training/testing
 Modify `videoToTensor.lua` file to specify the loaction of video, desired height/width and sequence length.
 
 Then type `th videoToTensor.lua` in command line to get the dataset.
+
+In order to download `MNIST` dataset use the following command:
+```
+sh downloadMNIST.sh
+```

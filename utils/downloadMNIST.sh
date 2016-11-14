@@ -8,16 +8,13 @@ mv data-big-train.t7.zip?dl=1 data-big-train.t7.zip
 mv data-small-test.t7.zip?dl=1 data-small-test.t7.zip
 mv data-small-train.t7.zip?dl=1 data-small-train.t7.zip
 
-unzip data-big-test.t7.zip 
+unzip data-big-test.t7.zip
 unzip data-big-train.t7.zip
 unzip data-small-test.t7.zip
-unzip data-small-train.t7.zip 
+unzip data-small-train.t7.zip
 
 rm -rf __MACOSX
 rm -rf data-big-test.t7.zip
-rm -rf data-big-train.t7.zip  
+rm -rf data-big-train.t7.zip
 rm -rf data-small-test.t7.zip
 rm -rf data-small-train.t7.zip
-
-
-
