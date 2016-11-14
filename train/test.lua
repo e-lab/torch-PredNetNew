@@ -20,23 +20,16 @@ function test:__init(opt)
 
    -- Dataset parameters
    self.channels = opt.channels
-   self.srcCh  = opt.srcCh
 
-   local datapath = opt.tdatapath
+   local datapath = opt.testData
    self.dataset = torch.load(datapath):float()
    self.dataset = self.dataset/self.dataset:max()
-   print("Loaded testset" .. self.dataset:size(1) .. " image sequences")
+   print("Loaded " .. self.dataset:size(1) .. " testing image sequences")
 
    self.batch  = opt.batch
    self.seq    = self.dataset:size(2)
    self.height = self.dataset:size(4)
    self.width  = self.dataset:size(5)
-
-   opt.seq    = self.seq
-   opt.height = self.height
-   opt.width  = self.width
-
-   print("Image resolution: " .. self.height .. " x " .. self.width)
 
    self.criterion = nn.MSECriterion()       -- citerion to calculate loss
 
@@ -52,9 +45,9 @@ function test:updateModel(model)
    local w = self.w
    local dE_dw = self.dE_dw
 
-   model:evaluate()                       -- Ensure model is in training mode
+   model:evaluate()                       -- Ensure model is in evaluate mode
 
-   local testError , err , interFrameError = 0 , 0 , 0
+   local testError, err, interFrameError = 0, 0, 0
    local optimState = self.optimState
    local L = self.layers
    local channels = self.channels
@@ -71,20 +64,20 @@ function test:updateModel(model)
    -- Initial state/input of the network
    -- {imageSequence, RL+1, R1, E1, R2, E2, ..., RL, EL}
    local H0 = {}
-   H0[3] = torch.zeros(batch,channels[1], height, width)                  -- C1[0]
-   H0[4] = torch.zeros(batch,channels[1], height, width)                  -- H1[0]
-   H0[5] = torch.zeros(batch,2*channels[1], height, width)                -- E1[0]
+   H0[3] = torch.zeros(batch, channels[1], height, width)                  -- C1[0]
+   H0[4] = torch.zeros(batch, channels[1], height, width)                  -- H1[0]
+   H0[5] = torch.zeros(batch, 2*channels[1], height, width)                -- E1[0]
 
    for l = 2, L do
       height = height/2
       width  = width/2
-      H0[3*l]   = torch.zeros(batch,channels[l], height, width)           -- C1[0]
-      H0[3*l+1] = torch.zeros(batch,channels[l], height, width)           -- Hl[0]
-      H0[3*l+2] = torch.zeros(batch,2*channels[l], height, width)         -- El[0]
+      H0[3*l]   = torch.zeros(batch, channels[l], height, width)           -- C1[0]
+      H0[3*l+1] = torch.zeros(batch, channels[l], height, width)           -- Hl[0]
+      H0[3*l+2] = torch.zeros(batch, 2*channels[l], height, width)         -- El[0]
    end
    height = height/2
    width  = width/2
-   H0[2] = torch.zeros(batch,channels[L+1], height, width)                -- RL+1
+   H0[2] = torch.zeros(batch, channels[L+1], height, width)                -- RL+1
 
    if self.dev == 'cuda' then
       for l = 2, 3*L+2 do
@@ -96,10 +89,10 @@ function test:updateModel(model)
 
       -- Dimension seq x channels x height x width
       local xSeq = torch.Tensor()
-      xSeq:resize(seq, batch ,self.srcCh, self.height, self.width)
+      xSeq:resize(seq, batch, channels[1], self.height, self.width)
       for i = itr, itr + batch - 1 do
          local tseq = self.dataset[shuffle[i]]                  -- 1 -> 20 input image
-         xSeq[{{},i-itr+1,{},{},{}}] = tseq:resize(seq, 1, self.srcCh, self.height, self.width)
+         xSeq[{{},i-itr+1,{},{},{}}] = tseq:resize(seq, 1, channels[1], self.height, self.width)
       end
 
       H0[1] = xSeq:clone()

@@ -20,24 +20,24 @@ function train:__init(opt)
                       weightDecay       = opt.weightDecay}
 
    -- Dataset parameters
-   self.channels = opt.channels
-   self.srcCh  = opt.srcCh
-
-   local datapath = opt.datapath
+   local datapath = opt.trainData
    self.dataset = torch.load(datapath):float()
    self.dataset = self.dataset/self.dataset:max()
-   print("Loaded " .. self.dataset:size(1) .. " image sequences")
+   print("Loaded " .. self.dataset:size(1) .. " training image sequences")
 
-   self.batch  = opt.batch
-   self.seq    = self.dataset:size(2)
-   self.height = self.dataset:size(4)
-   self.width  = self.dataset:size(5)
+   self.batch      = opt.batch
+   self.seq        = self.dataset:size(2)
+   opt.channels[1] = self.dataset:size(3)
+   self.height     = self.dataset:size(4)
+   self.width      = self.dataset:size(5)
 
    opt.seq    = self.seq
    opt.height = self.height
    opt.width  = self.width
 
    print("Image resolution: " .. self.height .. " x " .. self.width)
+
+   self.channels = opt.channels
 
    -- Initialize model generator
    prednet:__init(opt)
@@ -84,16 +84,16 @@ function train:updateModel()
    -- Initial state/input of the network
    -- {imageSequence, RL+1, R1, E1, R2, E2, ..., RL, EL}
    local H0 = {}
-   H0[3] = torch.zeros(batch,channels[1], height, width)                  -- C1[0]
-   H0[4] = torch.zeros(batch,channels[1], height, width)                  -- H1[0]
-   H0[5] = torch.zeros(batch,2*channels[1], height, width)                -- E1[0]
+   H0[3] = torch.zeros(batch, channels[1], height, width)                  -- C1[0]
+   H0[4] = torch.zeros(batch, channels[1], height, width)                  -- H1[0]
+   H0[5] = torch.zeros(batch, 2*channels[1], height, width)                -- E1[0]
 
    for l = 2, L do
       height = height/2
       width  = width/2
-      H0[3*l]   = torch.zeros(batch,channels[l], height, width)           -- C1[0]
-      H0[3*l+1] = torch.zeros(batch,channels[l], height, width)           -- Hl[0]
-      H0[3*l+2] = torch.zeros(batch,2*channels[l], height, width)         -- El[0]
+      H0[3*l]   = torch.zeros(batch, channels[l], height, width)           -- C1[0]
+      H0[3*l+1] = torch.zeros(batch, channels[l], height, width)           -- Hl[0]
+      H0[3*l+2] = torch.zeros(batch, 2*channels[l], height, width)         -- El[0]
    end
    height = height/2
    width  = width/2
@@ -110,10 +110,10 @@ function train:updateModel()
 
       -- Dimension seq x channels x height x width
       local xSeq = torch.Tensor()
-      xSeq:resize(seq, batch ,self.srcCh, self.height, self.width)
+      xSeq:resize(seq, batch, channels[1], self.height, self.width)
       for i = itr, itr + batch - 1 do
          local tseq = self.dataset[shuffle[i]]                  -- 1 -> 20 input image
-         xSeq[{{},i-itr+1,{},{},{}}] = tseq:resize(seq, 1, self.srcCh, self.height, self.width)
+         xSeq[{{},i-itr+1,{},{},{}}] = tseq:resize(seq, 1, channels[1], self.height, self.width)
       end
 
       H0[1] = xSeq:clone()
