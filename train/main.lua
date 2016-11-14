@@ -12,7 +12,6 @@ torch.setdefaulttensortype('torch.FloatTensor')
 -- Gather all the arguments
 local opts = require 'opts'
 local opt = opts.parse(arg)
-print(opt)
 
 if opt.dev == 'cuda' then
    require 'cunn'
@@ -27,9 +26,7 @@ local train = require 'train'
 local test  = require 'test'
 
 -- Input/Output channels for A of every layer
--- XXX Change value of channels[1] to # of input image channels
 opt.channels = torch.ones(opt.layers + 1)
-opt.channels[1] = opt.srcCh
 for l = 2, opt.layers + 1 do
    opt.channels[l] = 2^(l+3)
 end
@@ -58,12 +55,12 @@ for epoch = 1, opt.nEpochs do
    print("Epoch: ", epoch)
    local predError, replicaError = train:updateModel()
    local tpredError, treplicaError
-   if opt.test then
-      tpredError, treplicaError = test:updateModel(train.model)
-   end
+
+   tpredError, treplicaError = test:updateModel(train.model)
    logger:add{predError, replicaError}
    logger:style{'+-', '+-'}
    logger:plot()
+
    testlogger:add{tpredError, treplicaError}
    testlogger:style{'+-', '+-'}
    testlogger:plot()
