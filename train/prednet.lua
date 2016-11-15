@@ -183,7 +183,15 @@ local function stackBlocks(L, channels, vis, lstmLayer)
 
    -- Create input and output containers for nngraph gModule for TIME SERIES
    for i = 1, (3*L+2) do
-      table.insert(inputs, nn.Identity()())
+      table.insert(inputs, nn.Identity()():annotate{
+         graphAttributes = {fontcolor = 'blue'}
+      })
+      local l = math.floor(i/3)
+      if     i == 1 then   inputs[#inputs]:annotate{name = 'A1[t]'}
+      elseif i == 2 then   inputs[#inputs]:annotate{name = 'R'..(L+1)..'[t]'}
+      elseif i%3 == 0 then inputs[#inputs]:annotate{name = 'c'..l..'[t-1]'}
+      elseif i%3 == 1 then inputs[#inputs]:annotate{name = 'h'..l..'[t-1]'}
+      elseif i%3 == 2 then inputs[#inputs]:annotate{name = 'E'..l..'[t]'} end
    end
 
 --------------------------------------------------------------------------------
@@ -207,8 +215,12 @@ local function stackBlocks(L, channels, vis, lstmLayer)
                         :annotate{name = 'LSTM ' .. l,
                                   graphAttributes = gaR}
 
-      outputs[3*l-1] = (lstm - nn.SelectTable(1,1))                    -- Cell State
-      outputs[3*l]   = (lstm - nn.SelectTable(2,2))                    -- Hidden state
+      outputs[3*l-1] = (lstm - nn.SelectTable(1,1)):annotate{
+         name = 'c'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
+      }                    -- Cell State
+      outputs[3*l]   = (lstm - nn.SelectTable(2,2)):annotate{
+         name = 'h'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
+      }                    -- Hidden state
    end
 
 --------------------------------------------------------------------------------
