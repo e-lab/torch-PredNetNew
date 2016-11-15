@@ -15,10 +15,13 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
    -- Input  is 1+ 2*#Layer
    -- Output is 1+ 2*#Layer
    local inputs = {}
-   table.insert(inputs, nn.Identity()()) -- X
+   table.insert(inputs, nn.Identity()():annotate{
+      name = 'x[t]', graphAttributes = {fontcolor = 'blue'}}) -- X
    for l = 1, n do
-      table.insert(inputs, nn.Identity()()) -- Cell
-      table.insert(inputs, nn.Identity()()) -- Hidden state
+      table.insert(inputs, nn.Identity()():annotate{
+         name = 'c[t-1]', graphAttributes = {fontcolor = 'blue'}}) -- Cell
+      table.insert(inputs, nn.Identity()():annotate{
+         name = 'h[t-1]', graphAttributes = {fontcolor = 'blue'}}) -- Hidden state
    end
 
    local x
@@ -37,10 +40,14 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
       --Convolutions
       local i2Ig, i2Fg, i2Og, i2It
       if l == 1 then
-         i2Ig = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x)
-         i2Fg = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x)
-         i2Og = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x)
-         i2It = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x)
+         i2Ig = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{
+            name = 'W_i x[t]', graphAttributes = {fontcolor = 'red'}}
+         i2Fg = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{
+            name = 'W_f x[t]', graphAttributes = {fontcolor = 'red'}}
+         i2Og = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{
+            name = 'W_o x[t]', graphAttributes = {fontcolor = 'red'}}
+         i2It = sc(inDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{
+            name = 'W_c x[t]', graphAttributes = {fontcolor = 'red'}}
       else
          i2Ig = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x)
          i2Fg = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x)
@@ -48,10 +55,15 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
          i2It = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x)
       end
 
-      local h2Ig = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
-      local h2Fg = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
-      local h2Og = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
-      local h2It = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH)
+      local h2Ig, h2Fg, h2Og, h2It
+      h2Ig = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{
+         name = 'W_i h[t-1]', graphAttributes = {fontcolor = 'red'}}
+      h2Fg = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{
+         name = 'W_f h[t-1]', graphAttributes = {fontcolor = 'red'}}
+      h2Og = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{
+         name = 'W_o h[t-1]', graphAttributes = {fontcolor = 'red'}}
+      h2It = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{
+         name = 'W_c h[t-1]', graphAttributes = {fontcolor = 'red'}}
 
       local ig = nn.CAddTable(1,1)({i2Ig, h2Ig})
       local fg = nn.CAddTable(1,1)({i2Fg, h2Fg})
@@ -59,17 +71,22 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
       local it = nn.CAddTable(1,1)({i2It, h2It})
 
       -- Gates
-      local inGate = sg()(ig)
-      local fgGate = sg()(fg)
-      local ouGate = sg()(og)
-      local inTanh = nn.Tanh()(it)
+      local inGate = sg()(ig):annotate{
+         name = 'i[t]', graphAttributes = {fontcolor = 'green'}}
+      local fgGate = sg()(fg):annotate{
+         name = 'f[t]', graphAttributes = {fontcolor = 'green'}}
+      local ouGate = sg()(og):annotate{
+         name = 'o[t]', graphAttributes = {fontcolor = 'green'}}
+      local inTanh = nn.Tanh()(it):annotate{
+         name = 'c\'[t]', graphAttributes = {fontcolor = 'green'}}
       -- Calculate Cell state
       local nextC = nn.CAddTable()({
          nn.CMulTable(1,1)({fgGate, prevC}),
          nn.CMulTable(1,1)({inGate, inTanh})
-      })
+      }):annotate{name = 'c[t]', graphAttributes = {fontcolor = 'blue'}}
       -- Calculate output
-      local out = nn.CMulTable(1,1)({ouGate, nn.Tanh()(nextC)})
+      local out = nn.CMulTable(1,1)({ouGate, nn.Tanh()(nextC)}):annotate{
+         name = 'h[t]', graphAttributes = {fontcolor = 'blue'}}
 
       table.insert(outputs, nextC)
       table.insert(outputs, out)
