@@ -85,6 +85,10 @@ function test:updateModel(model)
       end
    end
    for itr = 1, dataSize, batch do
+      if itr + batch > dataSize then
+         break
+      end
+
       xlua.progress(itr, dataSize)
 
       -- Dimension seq x channels x height x width
