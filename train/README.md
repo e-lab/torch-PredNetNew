@@ -13,3 +13,9 @@ qlua main.lua --trainData ./dataset/data-train.t7 --testData ./dataset/data-test
 ```
 
 `saveGraph` and `display` options are used to save the generated graphs and to display output prediction for every sequence while training respectively.
+
+You can redraw the error charts by typing:
+
+```bash
+./showLog.plt /pathOfError/error.log
+```
