@@ -1,11 +1,13 @@
-# Video to tensor convertor
+# Utility files to create data compatible with this repository
 
-This script converts a video file into a .t7 file compatible as training/testing dataset for this repository.
-Modify `videoToTensor.lua` file to specify the loaction of video, desired height/width and sequence length.
+Three types of datasets are currently supported:
++ CamVid -> camvidToTensor.lua
++ Cityscapes -> cityscapesToTensor.lua
++ Video file -> videoToTensor.lua
++ MNIST -> downloadMNIST.lua
 
-Then type `th videoToTensor.lua` in command line to get the dataset.
+Type `th abcToTensor.lua`, to use any of the script and get your training and testing set.
+These scripts will give a .t7 file compatible with this repository.
+Modify the file to specify the loaction of video/dataset, desired height/width and sequence length.
 
-In order to download `MNIST` dataset use the following command:
-```
-sh downloadMNIST.sh
-```
+In order to download `MNIST` dataset use `sh downloadMNIST.sh`.
