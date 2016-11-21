@@ -116,10 +116,11 @@ local function block(l, L, iChannel, oChannel, vis)
    local A
    local layer = tostring(l)
    if l == 1 then
-      A = inputs[1]:annotate{name = 'A' .. layer,
+      A = inputs[1]:annotate{name = 'X',
                     graphAttributes = gaA}
    else
       local nodeA = nn.Sequential()
+      inputs[1]:annotate{name = 'E' .. layer-1}
       A = (inputs[1]
            - nodeA:add(SC(iChannel, oChannel, 3, 3, 1, 1, 1, 1))
                   :add(nn.ReLU())
@@ -165,7 +166,7 @@ local function stackBlocks(L, channels, vis, lstmLayer)
    --[[
        L -> Total number of layers
        Input and outputs in time series
-       Inputs: Image   -> A1     (1)
+       Inputs: Image   -> X      (1)
                RL+1    -> LSTM   (2)      This is always set to ZERO
 
                Cl[t-1] -> LSTM   (3l)     Cell state
@@ -187,11 +188,11 @@ local function stackBlocks(L, channels, vis, lstmLayer)
          graphAttributes = {fontcolor = 'blue'}
       })
       local l = math.floor(i/3)
-      if     i == 1 then   inputs[#inputs]:annotate{name = 'A1[t]'}
+      if     i == 1 then   inputs[#inputs]:annotate{name = 'X[t]'}
       elseif i == 2 then   inputs[#inputs]:annotate{name = 'R'..(L+1)..'[t]'}
-      elseif i%3 == 0 then inputs[#inputs]:annotate{name = 'c'..l..'[t-1]'}
-      elseif i%3 == 1 then inputs[#inputs]:annotate{name = 'h'..l..'[t-1]'}
-      elseif i%3 == 2 then inputs[#inputs]:annotate{name = 'E'..l..'[t]'} end
+      elseif i%3 == 0 then inputs[#inputs]:annotate{name = 'C'..l..'[t-1]'}
+      elseif i%3 == 1 then inputs[#inputs]:annotate{name = 'R'..l..'[t-1]'}
+      elseif i%3 == 2 then inputs[#inputs]:annotate{name = 'E'..l..'[t-1]'} end
    end
 
 --------------------------------------------------------------------------------
@@ -216,10 +217,10 @@ local function stackBlocks(L, channels, vis, lstmLayer)
                                   graphAttributes = gaR}
 
       outputs[3*l-1] = (lstm - nn.SelectTable(1,1)):annotate{
-         name = 'c'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
+         name = 'C'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
       }                    -- Cell State
       outputs[3*l]   = (lstm - nn.SelectTable(2,2)):annotate{
-         name = 'h'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
+         name = 'R'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
       }                    -- Hidden state
    end
 
@@ -232,12 +233,12 @@ local function stackBlocks(L, channels, vis, lstmLayer)
       if l == 1 then          -- First layer block has E and Ah as output
          --                img,        Rl/Hl
          local E_Ah = ({inputs[1], outputs[3*l]}
-                      - block(l, L, oChannel, oChannel, vis)):annotate{name = '{E / Ah}: ' .. l,
-                                                                       graphAttributes = gaE}
+                      - block(l, L, oChannel, oChannel, vis))
+                      :annotate{name = '{E,Ah}'..l..'[t]', graphAttributes = gaE}
 
          local E, Ah = E_Ah:split(2)
 
-         outputs[3*l+1] = E:annotate{name = 'E: ' .. l,
+         outputs[3*l+1] = E:annotate{name = 'E'..l..'[t]',
                                      graphAttributes = {
                                      style = 'filled',
                                      fillcolor = 'hotpink'}}
@@ -248,8 +249,8 @@ local function stackBlocks(L, channels, vis, lstmLayer)
          local iChannel = 2 * channels[l-1]
                               -- El-1,           Rl/Hl
          outputs[3*l+1] = ({outputs[3*(l-1)+1], outputs[3*l]}
-                          - block(l, L, iChannel, oChannel, vis)):annotate{name = 'E: ' .. l,
-                                                                           graphAttributes = gaE}
+                          - block(l, L, iChannel, oChannel, vis))
+                          :annotate{name = 'E'..l..'[t]', graphAttributes = gaE}
       end
    end
 
