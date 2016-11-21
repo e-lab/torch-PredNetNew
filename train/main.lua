@@ -59,20 +59,22 @@ for epoch = 1, opt.nEpochs do
    tpredError, treplicaError = test:updateModel(train.model)
    logger:add{predError, replicaError}
    logger:style{'+-', '+-'}
+   logger:setlogscale(true)
    logger:plot()
 
    testlogger:add{tpredError, treplicaError}
    testlogger:style{'+-', '+-'}
+   testlogger:setlogscale(true)
    testlogger:plot()
 
 
    -- Save the trained model
-   if replicaError > predError then
+   if treplicaError > tpredError then
       print('Save !')
       local saveLocation = opt.save .. 'model-' .. epoch .. '.net'
       prototype:float():clearState():evaluate()
       torch.save(saveLocation, prototype)
       if opt.dev == 'cuda' then  print('Back') train.model:cuda() end
-      prevTrainError = predError
+      prevTrainError = tpredError
    end
 end

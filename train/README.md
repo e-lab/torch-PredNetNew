@@ -1,11 +1,5 @@
 ## Training MatchNet
 
-To download mnist .t7 format data run
-
-```
-sh downMnist.sh
-```
-
 After obtaining the dataset compatible for this repo, point `main.lua` to it and run the following command:
 
 ```
