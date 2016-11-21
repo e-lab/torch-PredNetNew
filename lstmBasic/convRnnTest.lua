@@ -9,8 +9,8 @@ numLayer = 2
 m = convRNN(1,3,7,7,1,3,numLayer)
 
 --Cell and hidden layer number should be same
-x = torch.Tensor(1,32,32)
-h = torch.Tensor(3,32,32)
+x = torch.Tensor(32,1,32,32)
+h = torch.Tensor(32,3,32,32)
 
 ht = {}
 for i =1, numLayer do

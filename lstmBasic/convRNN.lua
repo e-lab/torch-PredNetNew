@@ -39,7 +39,7 @@ function convRNN(inDim, outDim, kw, kh, st, pa, layerNum)
       i2h = sc(outDim, outDim, kw, kh, stw, sth, paw, pah)(x):annotate{name='i2h_'..L}
     end
       h2h = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prev_h):annotate{name='h2Ig_'..L}
-    local next_h = nn.Tanh()(nn.CAddTable(){i2h, h2h})
+    local next_h = nn.Tanh()(nn.CAddTable(1,1){i2h, h2h})
 
     table.insert(outputs, next_h)
   end
