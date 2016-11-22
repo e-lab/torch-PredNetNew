@@ -31,34 +31,40 @@ local RNN = {}
                                                |
 --]]
 
-function RNN.getModel(channelRl, channelRl_1)
-   -- Rl+1 has 2x # of channels as compared to Rl
-   -- Rl[t-1] and El[t-1] have same # of channels
+function RNN.getModel(cRup, cR, cE, vis)
+   -- Channels count
+   -- Rup: cRup
+   -- R:   cR
+   -- E:   cE
+
    local input = {}
-   input[1] = nn.Identity()()       -- Rl+1
-   input[2] = nn.Identity()()       -- Rl[t-1]
-   input[3] = nn.Identity()()       -- El[t-1]
+   input[1] = nn.Identity()():annotate{name = 'Rup'}
+   input[2] = nn.Identity()():annotate{name = 'R'}
+   input[3] = nn.Identity()():annotate{name = 'E'}
 
    local SC = nn.SpatialConvolution
+   local SFC = nn.SpatialFullConvolution
+
+   local m = nn.ParallelTable()
+   -- UpConv(Rup[t])
+   m:add(SFC(cRup, cR, 3, 3, 2, 2, 1, 1, 1, 1))
+   -- Conv(R[t-1])
+   m:add(SC(cR, cR, 3, 3, 1, 1, 1, 1))
+   -- Conv(E[t-1])
+   m:add(SC(cE, cR, 3, 3, 1, 1, 1, 1))
 
    local n = nn.Sequential()
-   local m = nn.ParallelTable()
-   -- Conv(Rl+1)
-   m:add(nn.SpatialFullConvolution
-        (channelRl_1, channelRl, 3, 3, 2, 2, 1, 1, 1, 1))
-
-   -- Conv(Rl[t-1])
-   m:add(SC(channelRl, channelRl, 3, 3, 1, 1, 1, 1))
-
-   -- Conv(El[t-1])
-   m:add(SC(2*channelRl, channelRl, 3, 3, 1, 1, 1, 1))
    n:add(m)
-   n:add(nn.CAddTable())
+   n:add(nn.CAddTable(1, 1))
    n:add(nn.ReLU())
 
-   local Rl = input - n
-   local g = nn.gModule(input, {Rl})
-   graph.dot(g.fg, 'RNN', 'graphs/RNN')
+   local R = input - n
+   local g = nn.gModule(input, {R})
+
+   if vis then
+      graph.dot(g.fg, 'RNN', 'graphs/RNN')
+   end
+
    return g
 end
 
