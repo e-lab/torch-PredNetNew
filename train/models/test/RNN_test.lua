@@ -4,7 +4,8 @@
 -- Alfredo Canziani, Nov 16
 --------------------------------------------------------------------------------
 
-local rnn = require 'RNN'
+local rnn = require '../RNN'
+paths.mkdir('graphs')
 
 -- RNN.getModel(cRup, cR, cE, vis), c: channels
 local net = rnn.getModel(32, 16, 6, true)

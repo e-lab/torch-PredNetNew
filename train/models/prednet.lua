@@ -5,7 +5,7 @@ require 'nngraph'
 --nngraph.setDebug(true)
 
 -- included local packages
-local convLSTM = require 'convLSTM'
+local convLSTM = paths.dofile('convLSTM.lua')
 
 function prednet:__init(opt)
    -- Input/Output channels for A of every layer

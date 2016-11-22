@@ -4,7 +4,7 @@ require 'optim'
 require 'image'
 
 -- local packages
-local prednet = require 'prednet'
+local prednet = require 'models.prednet'
 
 function train:__init(opt)
    -- Model parameter
