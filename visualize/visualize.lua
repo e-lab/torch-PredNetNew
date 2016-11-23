@@ -15,6 +15,7 @@ local opts = require 'opts'
 local opt = opts.parse(arg)
 
 if opt.dev == 'cuda' then
+   require 'cunn'
    require 'cudnn'
 end
 
