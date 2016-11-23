@@ -68,7 +68,7 @@ for epoch = 1, opt.nEpochs do
    -- Save the trained model
    if treplicaError > tpredError then
       print('Save !')
-      local saveLocation = opt.save .. 'model-' .. epoch .. '.net'
+      local saveLocation = paths.concat(opt.save, 'model-' .. epoch .. '.net')
       prototype:float():clearState()
       torch.save(saveLocation, prototype)
       if opt.dev == 'cuda' then train.model:cuda() end
