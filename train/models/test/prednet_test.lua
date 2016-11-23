@@ -27,7 +27,7 @@ local function getBatchInput(b, seq, height, width, L, channels, mode)
    if mode == 1 then
       x[1] = torch.randn(b, channels[1], height, width)             -- Image
    elseif mode == 2 then
-      x[1] = torch.randn(seq, b, channels[1], height, width)        -- Image
+      x[1] = torch.randn(b, seq, channels[1], height, width)        -- Image
    end
    x[3] = torch.zeros(b, channels[1], height, width)                -- C1[0]
    x[4] = torch.zeros(b, channels[1], height, width)                -- H1[0]
@@ -50,20 +50,30 @@ end
 local dummyX, o
 
 -- getInput(seq, height, width, L, channels, 1)
-dummyX = getBatchInput(1, opt.seq, opt.height, opt.width, opt.layers, opt.channels, 1)
+dummyX = getBatchInput(4, opt.seq, opt.height, opt.width, opt.layers, opt.channels, 1)
 o = prototype:forward(dummyX)
 
-dummyX = getBatchInput(1, opt.seq, opt.height, opt.width, opt.layers, opt.channels, 2)
+dummyX = getBatchInput(4, opt.seq, opt.height, opt.width, opt.layers, opt.channels, 2)
 o = model:forward(dummyX)
 
+-- save populated graphs
+graph.dot(prototype.fg, 'PredNet Model', 'graphs/predNet-batch')
+graph.dot(model.fg, 'PredNet for whole sequence', 'graphs/wholeModel-batch')
 print('Batch test: ' .. sys.COLORS.green .. 'pass')
+
+local block
+local node = 12 -- block 1
+for a, b in ipairs(prototype.forwardnodes) do
+   if b.id == node then
+      block = b.data.module
+      graph.dot(block.fg, 'Block tensor', 'graphs/block-batch')
+     break
+   end
+end
 
 --------------------------------------------------------------------------------
 -- Testing simple mode
 --------------------------------------------------------------------------------
-
--- Currently failing
-nngraph.setDebug(true)
 
 local function getInput(seq, height, width, L, channels, mode)
    -- Input for the gModule
@@ -100,3 +110,10 @@ o = prototype:forward(dummyX)
 
 dummyX = getInput(opt.seq, opt.height, opt.width, opt.layers, opt.channels, 2)
 o = model:forward(dummyX)
+graph.dot(prototype.fg, 'PredNet Model', 'graphs/predNet-tensor')
+print('Simple test: ' .. sys.COLORS.green .. 'pass')
+
+-- save populated graphs
+graph.dot(prototype.fg, 'PredNet Model', 'graphs/predNet-tensor')
+graph.dot(model.fg, 'PredNet for whole sequence', 'graphs/wholeModel-tensor')
+graph.dot(block.fg, 'Block tensor', 'graphs/block-tensor')

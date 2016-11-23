@@ -84,20 +84,20 @@ function train:updateModel()
    -- Initial state/input of the network
    -- {imageSequence, RL+1, R1, E1, R2, E2, ..., RL, EL}
    local H0 = {}
-   H0[3] = torch.zeros(batch, channels[1], height, width)                  -- C1[0]
-   H0[4] = torch.zeros(batch, channels[1], height, width)                  -- H1[0]
-   H0[5] = torch.zeros(batch, 2*channels[1], height, width)                -- E1[0]
+   H0[3] = torch.zeros(batch, channels[1], height, width)              -- C1[0]
+   H0[4] = torch.zeros(batch, channels[1], height, width)              -- H1[0]
+   H0[5] = torch.zeros(batch, 2*channels[1], height, width)            -- E1[0]
 
    for l = 2, L do
       height = height/2
       width  = width/2
-      H0[3*l]   = torch.zeros(batch, channels[l], height, width)           -- C1[0]
-      H0[3*l+1] = torch.zeros(batch, channels[l], height, width)           -- Hl[0]
-      H0[3*l+2] = torch.zeros(batch, 2*channels[l], height, width)         -- El[0]
+      H0[3*l]   = torch.zeros(batch, channels[l], height, width)       -- C1[0]
+      H0[3*l+1] = torch.zeros(batch, channels[l], height, width)       -- Hl[0]
+      H0[3*l+2] = torch.zeros(batch, 2*channels[l], height, width)     -- El[0]
    end
    height = height/2
    width  = width/2
-   H0[2] = torch.zeros(batch,channels[L+1], height, width)                -- RL+1
+   H0[2] = torch.zeros(batch, channels[L+1], height, width)            -- RL+1
 
    if self.dev == 'cuda' then
       for l = 2, 3*L+2 do
@@ -105,7 +105,7 @@ function train:updateModel()
       end
    end
 
-   for itr = 1,dataSize, batch do
+   for itr = 1, dataSize, batch do
       if itr + batch > dataSize then
          break
       end
@@ -116,8 +116,8 @@ function train:updateModel()
       local xSeq = torch.Tensor()
       xSeq:resize(batch, seq, channels[1], self.height, self.width)
       for i = itr, itr + batch - 1 do
-         local tseq = self.dataset[shuffle[i]]                  -- 1 -> 20 input image
-         xSeq[{i-itr+1,{},{},{},{}}] = tseq:resize(1,seq, channels[1], self.height, self.width)
+         local tseq = self.dataset[shuffle[i]]  -- 1 -> 20 input image
+         xSeq[i-itr+1] = tseq:resize(1, seq, channels[1], self.height, self.width)
       end
 
       H0[1] = xSeq:clone()
@@ -141,7 +141,7 @@ function train:updateModel()
          --       Table of 2         Batch of 2
          -- {(64, 64), (64, 64)} -> (2, 64, 64)
          for i = 2, #h do
-            prediction[{{},i,{},{},{}}] = h[i]
+            prediction:select(2, i):copy(h[i])
          end
 
          local err = criterion:forward(prediction, xSeq)
@@ -158,17 +158,21 @@ function train:updateModel()
          -- Since 1st frame was ignored while calculating error (prediction[1] = xSeq[1]),
          -- 1st tensor in dE_dhTable is just a zero tensor
          local dE_dhTable = {}
-         dE_dhTable[1] = dE_dh[{{},1,{},{},{}}]:clone():zero()
+         dE_dhTable[1] = dE_dh:select(2, 1):clone():zero()
          for i = 2, seq do
-            dE_dhTable[i] = dE_dh[{{},i,{},{},{}}]
+            dE_dhTable[i] = dE_dh:select(2, i)
          end
 
          model:backward(H0, dE_dhTable)
 
          -- Display last prediction of every sequence
          if self.display then
-            self.dispWin = image.display{image={xSeq[{1, seq,{},{},{}}], prediction[{1, seq,{},{},{}}]},
-                                         legend='Real | Pred', win = self.dispWin}
+            self.dispWin = image.display{
+               image=torch.cat(xSeq:select(2, seq), prediction:select(2, seq), 4),
+               legend='Train - Real | Pred',
+               win = self.dispWin,
+               nrow = 1,
+            }
          end
 
          return err, dE_dw
@@ -178,8 +182,8 @@ function train:updateModel()
       w, err = optim.adam(eval_E, w, optimState)
 
       trainError = trainError + err[1]
-      interFrameError = interFrameError
-                     + criterion:forward(prediction[{{},seq,{},{},{}}], xSeq[{{},seq-1,{},{},{}}] )
+      interFrameError = interFrameError +
+         criterion:forward(prediction:select(2, seq), xSeq:select(2, seq-1))
    end
 
    -- Calculate time taken by 1 epoch

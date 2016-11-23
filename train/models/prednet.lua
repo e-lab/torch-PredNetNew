@@ -116,8 +116,8 @@ local function block(l, L, iChannel, oChannel, vis)
    -- Error between A and A hat
    local E = ({{A, Ah} - nn.CSubTable() - nn.ReLU(),
               {Ah, A} - nn.CSubTable() - nn.ReLU()}
-             - nn.JoinTable(2)):annotate{name = 'E' .. layer,
-                                graphAttributes = gaE}
+             - nn.JoinTable(1, 3))
+             :annotate{name = 'E' .. layer, graphAttributes = gaE}
 
    local g
    if l == 1 then
@@ -180,17 +180,17 @@ local function stackBlocks(L, channels, vis, lstmLayer)
       else
          upR = outputs[3*(l+1)] - nn.SpatialUpSamplingNearest(2)     -- Upsample prev Rl+1
       end
-      R = {upR, inputs[3*l + 2]} - nn.JoinTable(2)
+      R = {upR, inputs[3*l + 2]} - nn.JoinTable(1, 3)
 
       lstm = ({R, inputs[3*l], inputs[3*l+1]}
               - convLSTM:getModel(channels[l+1] + 2 * channels[l], channels[l], lstmLayer))
                         :annotate{name = 'LSTM ' .. l,
                                   graphAttributes = gaR}
 
-      outputs[3*l-1] = (lstm - nn.SelectTable(1,1)):annotate{
+      outputs[3*l-1] = (lstm - nn.SelectTable(1)):annotate{
          name = 'C'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
       }                    -- Cell State
-      outputs[3*l]   = (lstm - nn.SelectTable(2,2)):annotate{
+      outputs[3*l]   = (lstm - nn.SelectTable(2)):annotate{
          name = 'R'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
       }                    -- Hidden state
    end
@@ -275,10 +275,10 @@ function prednet:getModel()
    end
 
    -- eg for 5 grayscale images your input will be of dimension 5xhxw
-   local splitInput = nn.SplitTable(2)(inputSequence)
+   local splitInput = nn.SplitTable(1, 4)(inputSequence)
 
    for i = 1, seq do
-      local inputFrame = nn.SelectTable(i,i)(splitInput):annotate{name = 'Input Frame #' .. i,
+      local inputFrame = nn.SelectTable(i)(splitInput):annotate{name = 'Input Frame #' .. i,
                                                                 graphAttributes = {
                                                                 style = 'filled',
                                                                 fillcolor = 'gold1'}}
@@ -291,7 +291,7 @@ function prednet:getModel()
                                                  fillcolor = 'moccasin'}}
 
       -- Only Ah1 is sent as output
-      outputs[i] = nn.SelectTable(1,1)(tempStates)       -- Send Ah to output
+      outputs[i] = nn.SelectTable(1)(tempStates)       -- Send Ah to output
                                                 :annotate{name = 'Prediction',
                                                           graphAttributes = gaAh}
 
@@ -308,11 +308,10 @@ function prednet:getModel()
                nodeName = 'H Sequence(' .. seq .. '), Layer(' .. (l/3) .. ')'
             end
 
-            H[l] = nn.SelectTable(l+1,l+1)(tempStates)     -- Pass state values to next sequence
-                                                  :annotate{name = nodeName,
-                                                   graphAttributes = {
-                                                   style = 'filled',
-                                                   fillcolor = styleColor}}
+            -- Pass state values to next sequence
+            H[l] = nn.SelectTable(l+1)(tempStates):annotate{
+               name = nodeName, graphAttributes = {
+                  style = 'filled', fillcolor = styleColor}}
          end
       end
    end

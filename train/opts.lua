@@ -25,7 +25,7 @@ function opts.parse(arg)
    ## Model
    --layers       (default 3)          number of layers in the model
    --seq          (default 5)          number of sequence to look at
-   --save         (default ./media/)    save model at this location
+   --save         (default ./media/)   save model at this location
 
    ## Graph
    --saveGraph                         save the graphs

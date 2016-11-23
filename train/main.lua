@@ -41,11 +41,14 @@ test:__init(opt)
 
 -- Logger
 if not paths.dirp(opt.save) then paths.mkdir(opt.save) end
+local logger, testlogger
 logger = optim.Logger(paths.concat(opt.save,'error.log'))
 logger:setNames{'Prediction Error', 'Replica Error'}
+logger:style{'+-', '+-'}
 logger:display(opt.display)
 testlogger = optim.Logger(paths.concat(opt.save,'testerror.log'))
 testlogger:setNames{'Test Prediction Error', 'Test Replica Error'}
+testlogger:style{'+-', '+-'}
 testlogger:display(opt.display)
 
 print("\nTRAINING\n")
@@ -54,27 +57,21 @@ local prevTrainError = 10000
 for epoch = 1, opt.nEpochs do
    print("Epoch: ", epoch)
    local predError, replicaError = train:updateModel()
-   local tpredError, treplicaError
+   local tpredError, treplicaError = test:updateModel(train.model)
 
-   tpredError, treplicaError = test:updateModel(train.model)
    logger:add{predError, replicaError}
-   logger:style{'+-', '+-'}
-   logger:setlogscale(true)
    logger:plot()
 
    testlogger:add{tpredError, treplicaError}
-   testlogger:style{'+-', '+-'}
-   testlogger:setlogscale(true)
    testlogger:plot()
-
 
    -- Save the trained model
    if treplicaError > tpredError then
       print('Save !')
       local saveLocation = opt.save .. 'model-' .. epoch .. '.net'
-      prototype:float():clearState():evaluate()
+      prototype:float():clearState()
       torch.save(saveLocation, prototype)
-      if opt.dev == 'cuda' then  print('Back') train.model:cuda() end
+      if opt.dev == 'cuda' then train.model:cuda() end
       prevTrainError = tpredError
    end
 end
