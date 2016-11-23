@@ -14,10 +14,9 @@ function prednet:__init(opt)
    self.seq = opt.seq
    self.height = opt.height
    self.width  = opt.width
-   self.saveGraph = opt.saveGraph
-   self.dev = opt.dev
-   self.lstmLayer = opt.lstmLayer
-   if self.saveGraph then paths.mkdir('graphs') end
+   self.saveGraph = opt.saveGraph or false
+   self.dev = opt.dev or 'cpu'
+   self.lstmLayer = opt.lstmLayer or 1
 end
 
 -- Macros
@@ -26,34 +25,6 @@ local gaA  = {color = 'blue', fontcolor = 'blue'}
 local gaAh = {style = 'filled', fillcolor = 'skyblue'}
 local gaE  = {style = 'filled', fillcolor = 'lightpink'}
 local gaR  = {style = 'filled', fillcolor = 'springgreen'}
-
--- This function is used if you want to save the graphs
-local function getInput(seq, height, width, L, channels, mode)
-   -- Input for the gModule
-   local x = {}
-
-   if mode == 1 then
-      x[1] = torch.randn(channels[1], height, width)             -- Image
-   elseif mode == 2 then
-      x[1] = torch.randn(seq, channels[1], height, width)        -- Image
-   end
-   x[3] = torch.zeros(channels[1], height, width)                -- C1[0]
-   x[4] = torch.zeros(channels[1], height, width)                -- H1[0]
-   x[5] = torch.zeros(2*channels[1], height, width)              -- E1[0]
-
-   for l = 2, L do
-      height = height/2
-      width = width/2
-      x[3*l]   = torch.zeros(channels[l], height, width)         -- C1[0]
-      x[3*l+1] = torch.zeros(channels[l], height,width)          -- Hl[0]
-      x[3*l+2] = torch.zeros(2*channels[l], height, width)       -- El[0]
-   end
-   height = height/2
-   width = width/2
-   x[2] = torch.zeros(channels[L+1], height, width)              -- RL+1
-
-   return x
-end
 
 --[[
     E: Error
@@ -349,25 +320,7 @@ function prednet:getModel()
    local g = nn.gModule({inputSequence, RL_1, table.unpack(H0)}, outputs)
 
    if vis then
-      -- If you want to view tensor dimensions then uncomment these lines
-      -- local dummyX = getInput(seq, height, width, L, channels, 1)
-      -- if self.dev == 'cuda' then
-      --    for i = 1, #dummyX do
-      --       dummyX[i] = dummyX[i]:cuda()
-      --    end
-      -- end
-
-      -- local o = prototype:forward(dummyX)
       graph.dot(prototype.fg, 'PredNet Model', 'graphs/predNet')
-
-      -- dummyX = getInput(seq, height, width, L, channels, 2)
-      -- if self.dev == 'cuda' then
-      --    for i = 1, #dummyX do
-      --       dummyX[i] = dummyX[i]:cuda()
-      --    end
-      -- end
-
-      -- o = g:forward(dummyX)
       graph.dot(g.fg, 'PredNet for whole sequence', 'graphs/wholeModel')
    end
 
