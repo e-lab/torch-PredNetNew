@@ -93,10 +93,10 @@ function test:updateModel(model)
 
       -- Dimension seq x channels x height x width
       local xSeq = torch.Tensor()
-      xSeq:resize(seq, batch, channels[1], self.height, self.width)
+      xSeq:resize(batch, seq, channels[1], self.height, self.width)
       for i = itr, itr + batch - 1 do
          local tseq = self.dataset[shuffle[i]]                  -- 1 -> 20 input image
-         xSeq[{{},i-itr+1,{},{},{}}] = tseq:resize(seq, 1, channels[1], self.height, self.width)
+         xSeq[{i-itr+1,{},{},{},{}}] = tseq:resize(1,seq, channels[1], self.height, self.width)
       end
 
       H0[1] = xSeq:clone()
@@ -119,20 +119,20 @@ function test:updateModel(model)
       --       Table of 2         Batch of 2
       -- {(64, 64), (64, 64)} -> (2, 64, 64)
       for i = 2, #h do
-         prediction[i] = h[i]
+         prediction[{{},i,{},{},{}}] = h[i]
       end
 
       err = criterion:forward(prediction, xSeq)
 
       -- Display last prediction of every sequence
       if self.display then
-         self.dispWin = image.display{image={xSeq[{seq,1,{},{},{}}], prediction[{seq,1,{},{},{}}]},
+         self.dispWin = image.display{image={xSeq[{1,seq,{},{},{}}], prediction[{1,seq,{},{},{}}]},
                                       legend='Real | Pred', win = self.dispWin}
       end
 
       testError = testError + err
       interFrameError = interFrameError
-                     + criterion:forward(prediction[{{seq,{},{},{},{}}}], xSeq[{{seq-1,{},{},{},{}}}] )
+                     + criterion:forward(prediction[{{},seq,{},{},{}}], xSeq[{{},seq-1,{},{},{}}] )
    end
 
    -- Calculate time taken by 1 epoch

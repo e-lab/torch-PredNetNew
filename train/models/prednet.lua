@@ -114,8 +114,8 @@ local function block(l, L, iChannel, oChannel, vis)
                                  graphAttributes = gaAh}
 
    -- Error between A and A hat
-   local E = ({{A, Ah} - nn.CSubTable(1,1) - nn.ReLU(),
-              {Ah, A} - nn.CSubTable(1,1) - nn.ReLU()}
+   local E = ({{A, Ah} - nn.CSubTable() - nn.ReLU(),
+              {Ah, A} - nn.CSubTable() - nn.ReLU()}
              - nn.JoinTable(2)):annotate{name = 'E' .. layer,
                                 graphAttributes = gaE}
 
@@ -275,7 +275,7 @@ function prednet:getModel()
    end
 
    -- eg for 5 grayscale images your input will be of dimension 5xhxw
-   local splitInput = nn.SplitTable(1)(inputSequence)
+   local splitInput = nn.SplitTable(2)(inputSequence)
 
    for i = 1, seq do
       local inputFrame = nn.SelectTable(i,i)(splitInput):annotate{name = 'Input Frame #' .. i,

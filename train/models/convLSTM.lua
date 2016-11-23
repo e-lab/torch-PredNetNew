@@ -65,10 +65,10 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
       h2It = scNB(outDim, outDim, kw, kh, stw, sth, paw, pah)(prevH):annotate{
          name = 'W_c h[t-1]', graphAttributes = {fontcolor = 'red'}}
 
-      local ig = nn.CAddTable(1,1)({i2Ig, h2Ig})
-      local fg = nn.CAddTable(1,1)({i2Fg, h2Fg})
-      local og = nn.CAddTable(1,1)({i2Og, h2Og})
-      local it = nn.CAddTable(1,1)({i2It, h2It})
+      local ig = nn.CAddTable()({i2Ig, h2Ig})
+      local fg = nn.CAddTable()({i2Fg, h2Fg})
+      local og = nn.CAddTable()({i2Og, h2Og})
+      local it = nn.CAddTable()({i2It, h2It})
 
       -- Gates
       local inGate = sg()(ig):annotate{
@@ -81,11 +81,11 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
          name = 'c\'[t]', graphAttributes = {fontcolor = 'green'}}
       -- Calculate Cell state
       local nextC = nn.CAddTable()({
-         nn.CMulTable(1,1)({fgGate, prevC}),
-         nn.CMulTable(1,1)({inGate, inTanh})
+         nn.CMulTable()({fgGate, prevC}),
+         nn.CMulTable()({inGate, inTanh})
       }):annotate{name = 'c[t]', graphAttributes = {fontcolor = 'blue'}}
       -- Calculate output
-      local out = nn.CMulTable(1,1)({ouGate, nn.Tanh()(nextC)}):annotate{
+      local out = nn.CMulTable()({ouGate, nn.Tanh()(nextC)}):annotate{
          name = 'h[t]', graphAttributes = {fontcolor = 'blue'}}
 
       table.insert(outputs, nextC)
