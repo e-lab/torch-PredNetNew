@@ -14,8 +14,6 @@ prednet:__init(opt)
 -- Get the model unwrapped over time as well as the prototype
 local model, prototype = prednet:getModel()
 
-paths.mkdir('graphs')
-
 --------------------------------------------------------------------------------
 -- Testing batch mode
 --------------------------------------------------------------------------------

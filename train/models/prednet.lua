@@ -17,6 +17,8 @@ function prednet:__init(opt)
    self.saveGraph = opt.saveGraph or false
    self.dev = opt.dev or 'cpu'
    self.lstmLayer = opt.lstmLayer or 1
+
+   if self.saveGraph then paths.mkdir('graphs') end
 end
 
 -- Macros
