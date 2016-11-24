@@ -31,27 +31,28 @@ local RNN = {}
                                                |
 --]]
 
-function RNN.getModel(cRup, cR, cE, vis)
+function RNN.getModel(channels, vis)
    -- Channels count
-   -- Rup: cRup
-   -- R:   cR
-   -- E:   cE
+   -- upR: channels.upR
+   -- R:   channels.R
+   -- E:   channels.E
 
    local input = {}
-   input[1] = nn.Identity()():annotate{name = 'Rup'}
+   input[1] = nn.Identity()():annotate{name = 'upR'}
    input[2] = nn.Identity()():annotate{name = 'R'}
    input[3] = nn.Identity()():annotate{name = 'E'}
 
    local SC = nn.SpatialConvolution
    local SFC = nn.SpatialFullConvolution
+   local c = channels
 
    local m = nn.ParallelTable()
-   -- UpConv(Rup[t])
-   m:add(SFC(cRup, cR, 3, 3, 2, 2, 1, 1, 1, 1))
+   -- UpConv(upR[t])
+   m:add(SFC(c.upR, c.R, 3, 3, 2, 2, 1, 1, 1, 1))
    -- Conv(R[t-1])
-   m:add(SC(cR, cR, 3, 3, 1, 1, 1, 1))
+   m:add(SC(c.R, c.R, 3, 3, 1, 1, 1, 1))
    -- Conv(E[t-1])
-   m:add(SC(cE, cR, 3, 3, 1, 1, 1, 1))
+   m:add(SC(c.E, c.R, 3, 3, 1, 1, 1, 1))
 
    local n = nn.Sequential()
    n:add(m)
