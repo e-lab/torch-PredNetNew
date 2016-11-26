@@ -59,6 +59,12 @@ function train:__init(opt)
    if self.dev == 'cuda' then
       self.model:cuda()
       self.criterion:cuda()
+
+      -- Use multiple GPUs
+      local gpuList = {}
+      for i = 1, opt.nGPU do gpuList[i] = i end
+      self.model = nn.DataParallelTable(1, true, true):add(self.model:cuda(), gpuList)
+      print(opt.nGPU .. " GPUs being used")
    end
 
    -- Put model parameters into contiguous memory
