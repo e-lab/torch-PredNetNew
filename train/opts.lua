@@ -18,7 +18,7 @@ function opts.parse(arg)
    ## Dataset
    --datapath     (default /media/)
                   path for train and test data
-   --batch        (default 1)          number of batch size
+   --batch        (default 5)          number of batch size
 
    ## Model
    --layers       (default 3)          number of layers in the model
@@ -31,6 +31,7 @@ function opts.parse(arg)
    ## Device
    --dev          (default cuda)       Device to be used: cpu/cuda
    --devID        (default 1)          GPU number
+   --nGPU         (default 2)          Number GPUs to be used
 
    ## Miscellaneous parameters
    --seed         (default 8)
@@ -41,4 +42,3 @@ function opts.parse(arg)
 end
 
 return opts
-

@@ -1,3 +1,14 @@
+--------------------------------------------------------------------------------
+-- Train any prednet or prednet like model
+-- First call __init(opt) and then updateModel() to train model
+--
+-- opt is a table containing following indexes:
+-- batch, channels, datapath, dev, display, layers, learningRate,
+-- learningRateDecay, momentum, nGPU, weightDecay
+--
+-- Written by: Abhishek Chaurasia
+--------------------------------------------------------------------------------
+
 local train = {}
 
 require 'optim'

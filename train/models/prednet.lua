@@ -1,3 +1,17 @@
+--------------------------------------------------------------------------------
+-- This script returns prednet model.
+-- To get the model, first call __init function with 'opt' as parameter
+-- Then call getModel(), which will return the prototype
+-- as well as the whole model
+--
+-- opt is a table containing following indexes:
+-- channels, datapath, dev, display, height, layers, learningRate,
+-- learningRateDecay, lstmLayer, momentum, nGPU, saveGraph, seq,
+-- weightDecay, width
+--
+-- Written by: Abhishek Chaurasia
+--------------------------------------------------------------------------------
+
 local prednet = {}
 
 require 'nngraph'
