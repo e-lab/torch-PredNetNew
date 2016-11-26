@@ -21,7 +21,7 @@ function test:__init(opt)
    -- Dataset parameters
    self.channels = opt.channels
 
-   local datapath = opt.testData
+   local datapath = opt.datapath .. 'testData.t7'
    self.dataset = torch.load(datapath):float()
    self.dataset = self.dataset/self.dataset:max()
    print("Loaded " .. self.dataset:size(1) .. " testing image sequences")

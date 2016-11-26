@@ -11,11 +11,11 @@ require 'xlua'
 -- Dataset path
 local datapath = '/media/HDD1/Datasets2/originalDatasets/CamVid/SegNet/CamVid'
 -- Destination path where tensor will be saved
-local cachepath = '/media/HDD1/Models/MatchNet/'
+local cachepath = '/media/HDD1/Models/MatchNet/CamVid/'
 
 local imHeight  = 128
 local imWidth   = 192
-local seqLength = 5
+local seqLength = 10
 
 local trainFile = datapath .. '/train.txt'
 local testFile  = datapath .. '/test.txt'

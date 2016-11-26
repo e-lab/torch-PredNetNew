@@ -20,7 +20,7 @@ function train:__init(opt)
                       weightDecay       = opt.weightDecay}
 
    -- Dataset parameters
-   local datapath = opt.trainData
+   local datapath = opt.datapath .. '/trainData.t7'
    self.dataset = torch.load(datapath):float()
    self.dataset = self.dataset/self.dataset:max()
    print("Loaded " .. self.dataset:size(1) .. " training image sequences")

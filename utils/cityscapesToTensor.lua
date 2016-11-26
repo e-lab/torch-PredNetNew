@@ -3,8 +3,8 @@ require 'xlua'
 
 local input = '/media/HDD1/Datasets2/testVideos/cityscapesDemoVideo/stuttgart_02/'
 -- Location to save the tensor
-local saveTrain = './cityscapesTrain.t7'
-local saveTest  = './cityscapesTest.t7'
+local saveTrain = './trainData.t7'
+local saveTest  = './testData.t7'
 local trainTestRatio = 4                  -- train/test
 
 -- Specify desired height and width of the dataset as well as the sequence length
