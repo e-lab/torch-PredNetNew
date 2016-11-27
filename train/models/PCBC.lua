@@ -17,10 +17,13 @@ function prednet:__init(opt)
    self.saveGraph = opt.saveGraph or false
    self.dev = opt.dev or 'cpu'
    self.lstmLayer = opt.lstmLayer or 1
+
+   if self.saveGraph then paths.mkdir('graphs') end
 end
 
 -- Macros
 local SC = nn.SpatialConvolution
+local SFC = nn.SpatialFullConvolution
 local gaA  = {color = 'blue', fontcolor = 'blue'}
 local gaAh = {style = 'filled', fillcolor = 'skyblue'}
 local gaE  = {style = 'filled', fillcolor = 'lightpink'}
@@ -66,7 +69,7 @@ local gaR  = {style = 'filled', fillcolor = 'springgreen'}
 
 --]]
 
-local function block(l, L, iChannel, oChannel, vis)
+local function block(l, L, iC, oC, vis)
    local inputs = {}
 
    --[[
@@ -84,47 +87,43 @@ local function block(l, L, iChannel, oChannel, vis)
    table.insert(inputs, nn.Identity()())         -- A1 / El-1
    table.insert(inputs, nn.Identity()())         -- Rl
 
-   local A
    local layer = tostring(l)
-   if l == 1 then
-      A = inputs[1]:annotate{name = 'X',
-                    graphAttributes = gaA}
-   else
-      local nodeA = nn.Sequential()
-      inputs[1]:annotate{name = 'E' .. layer-1}
-      A = (inputs[1]
-           - nodeA:add(SC(iChannel, oChannel, 3, 3, 1, 1, 1, 1))
-                  :add(nn.ReLU())
-                  :add(nn.SpatialMaxPooling(2, 2, 2, 2)))
-                  :annotate{name = 'A' .. layer,
-                            graphAttributes = gaA}
-   end
+   local X = inputs[1]
+   if l == 1 then X:annotate{name = 'X', graphAttributes = gaA}
+   else           X:annotate{name = 'prjE' .. l-1, graphAttributes = gaA} end
 
    -- Get Rl
-   local R = inputs[2]
+   local R = inputs[2]:annotate{name = 'R' .. layer, graphAttributes = {
+                          style = 'filled', fillcolor = 'springgreen'}}
 
    -- Predicted A
    local nodeAh = nn.Sequential()
-   local Ah = (R:annotate{name = 'R' .. layer, graphAttributes = {
-                          style = 'filled',
-                          fillcolor = 'springgreen'}}
-               - nodeAh:add(SC(oChannel, oChannel, 3, 3, 1, 1, 1, 1))
-                       :add(nn.ReLU()))
-                       :annotate{name = 'Ah' .. layer,
-                                 graphAttributes = gaAh}
+                  :add(SFC(oC, iC, 3, 3, 2, 2, 1, 1, 1, 1))
+                  :add(nn.ReLU())
+
+   local Ah = (R - nodeAh)
+              :annotate{name = 'Ah' .. layer, graphAttributes = gaAh}
 
    -- Error between A and A hat
-   local E = ({{A, Ah} - nn.CSubTable() - nn.ReLU(),
-              {Ah, A} - nn.CSubTable() - nn.ReLU()}
+   local E = ({{X, Ah} - nn.CSubTable() - nn.ReLU(),
+              {Ah, X} - nn.CSubTable() - nn.ReLU()}
              - nn.JoinTable(1, 3))
              :annotate{name = 'E' .. layer, graphAttributes = gaE}
+
+   local nodeA = nn.Sequential()
+                 :add(SC(2*iC, oC, 3, 3, 1, 1, 1, 1))
+                 :add(nn.ReLU())
+                 :add(nn.SpatialMaxPooling(2, 2, 2, 2))
+
+   A = (E - nodeA)
+       :annotate{name = 'A' .. layer, graphAttributes = gaA}
 
    local g
    if l == 1 then
       -- For first layer return Ah for viewing
-      g = nn.gModule(inputs , {E, Ah})
+      g = nn.gModule(inputs , {A, Ah})
    else
-      g = nn.gModule(inputs, {E})
+      g = nn.gModule(inputs, {A})
    end
 
    if vis then
@@ -163,7 +162,7 @@ local function stackBlocks(L, channels, vis, lstmLayer)
       elseif i == 2 then   inputs[#inputs]:annotate{name = 'R'..(L+1)..'[t]'}
       elseif i%3 == 0 then inputs[#inputs]:annotate{name = 'C'..l..'[t-1]'}
       elseif i%3 == 1 then inputs[#inputs]:annotate{name = 'R'..l..'[t-1]'}
-      elseif i%3 == 2 then inputs[#inputs]:annotate{name = 'E'..l..'[t-1]'} end
+      elseif i%3 == 2 then inputs[#inputs]:annotate{name = 'prjE'..l..'[t-1]'} end
    end
 
 --------------------------------------------------------------------------------
@@ -176,11 +175,11 @@ local function stackBlocks(L, channels, vis, lstmLayer)
    -- Calculate RL-1 -> RL-2 -> ... -> R1
    for l = L, 1, -1 do
       if l == L then upR = inputs[2] else upR = outputs[3*(l+1)] end
-      c.upR = channels[l+1]
+      c.upR = channels[l+2]
       E = inputs[3*l + 2]
-      c.E = 2 * channels[l]
+      c.E = channels[l+1]
       R = inputs[3*l + 1]
-      c.R = channels[l]
+      c.R = channels[l+1]
 
       rnn = ({upR, R, E} - RNN.getModel(c, vis))
          :annotate{name = 'RNN ' .. l, graphAttributes = gaR}
@@ -196,17 +195,20 @@ local function stackBlocks(L, channels, vis, lstmLayer)
 -- Stack blocks to form the model for time t
 --------------------------------------------------------------------------------
    for l = 1, L do
-      local oChannel = channels[l]
+      local iC = channels[l]
+      local oC = channels[l+1]
+
 
       if l == 1 then          -- First layer block has E and Ah as output
          --                img,        Rl/Hl
          local E_Ah = ({inputs[1], outputs[3*l]}
-                      - block(l, L, oChannel, oChannel, vis))
-                      :annotate{name = '{E,Ah}'..l..'[t]', graphAttributes = gaE}
+                      - block(l, L, iC, oC, vis))
+                      :annotate{name = '{prjE,Ah}'..l..'[t]',
+                      graphAttributes = gaE}
 
          local E, Ah = E_Ah:split(2)
 
-         outputs[3*l+1] = E:annotate{name = 'E'..l..'[t]',
+         outputs[3*l+1] = E:annotate{name = 'prjE'..l..'[t]',
                                      graphAttributes = {
                                      style = 'filled',
                                      fillcolor = 'hotpink'}}
@@ -217,8 +219,9 @@ local function stackBlocks(L, channels, vis, lstmLayer)
          local iChannel = 2 * channels[l-1]
                               -- El-1,           Rl/Hl
          outputs[3*l+1] = ({outputs[3*(l-1)+1], outputs[3*l]}
-                          - block(l, L, iChannel, oChannel, vis))
-                          :annotate{name = 'E'..l..'[t]', graphAttributes = gaE}
+                          - block(l, L, iC, oC, vis))
+                          :annotate{name = 'prjE'..l..'[t]',
+                          graphAttributes = gaE}
       end
    end
 

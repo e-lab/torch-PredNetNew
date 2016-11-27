@@ -40,7 +40,7 @@ function RNN.getModel(channels, vis)
    local input = {}
    input[1] = nn.Identity()():annotate{name = 'upR'}
    input[2] = nn.Identity()():annotate{name = 'R'}
-   input[3] = nn.Identity()():annotate{name = 'E'}
+   input[3] = nn.Identity()():annotate{name = 'prjE'}
 
    local SC = nn.SpatialConvolution
    local SFC = nn.SpatialFullConvolution
@@ -51,8 +51,8 @@ function RNN.getModel(channels, vis)
    m:add(SFC(c.upR, c.R, 3, 3, 2, 2, 1, 1, 1, 1))
    -- Conv(R[t-1])
    m:add(SC(c.R, c.R, 3, 3, 1, 1, 1, 1))
-   -- Conv(E[t-1])
-   m:add(SC(c.E, c.R, 3, 3, 1, 1, 1, 1))
+   -- Iden(prjE[t])
+   m:add(nn.Identity())
 
    local n = nn.Sequential()
    n:add(m)
