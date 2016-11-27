@@ -66,14 +66,14 @@ function test:updateModel(model)
    local H0 = {}
    H0[3] = torch.zeros(batch, channels[1], height, width)              -- C1[0]
    H0[4] = torch.zeros(batch, channels[1], height, width)              -- H1[0]
-   H0[5] = torch.zeros(batch, 2*channels[1], height, width)            -- E1[0]
+   H0[5] = torch.zeros(batch, channels[1], height, width)            -- E1[0]
 
    for l = 2, L do
       height = height/2
       width  = width/2
       H0[3*l]   = torch.zeros(batch, channels[l], height, width)       -- C1[0]
       H0[3*l+1] = torch.zeros(batch, channels[l], height, width)       -- Hl[0]
-      H0[3*l+2] = torch.zeros(batch, 2*channels[l], height, width)     -- El[0]
+      H0[3*l+2] = torch.zeros(batch, channels[l], height, width)     -- El[0]
    end
    height = height/2
    width  = width/2

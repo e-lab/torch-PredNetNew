@@ -8,7 +8,7 @@ local opt = {
    layers = 2, seq = 5, height = 8, width = 8, saveGraph = true,
    channels = {3, 16, 32}
 }
-local prednet = require '../prednet'
+local prednet = require '../PCBC'
 -- Initialize model generator
 prednet:__init(opt)
 -- Get the model unwrapped over time as well as the prototype
@@ -29,14 +29,14 @@ local function getBatchInput(b, seq, height, width, L, channels, mode)
    end
    x[3] = torch.zeros(b, channels[1], height, width)                -- C1[0]
    x[4] = torch.zeros(b, channels[1], height, width)                -- H1[0]
-   x[5] = torch.zeros(b, 2*channels[1], height, width)              -- E1[0]
+   x[5] = torch.zeros(b, channels[1], height, width)              -- E1[0]
 
    for l = 2, L do
       height = height/2
       width = width/2
       x[3*l]   = torch.zeros(b, channels[l], height, width)         -- C1[0]
       x[3*l+1] = torch.zeros(b, channels[l], height,width)          -- Hl[0]
-      x[3*l+2] = torch.zeros(b, 2*channels[l], height, width)       -- El[0]
+      x[3*l+2] = torch.zeros(b, channels[l], height, width)       -- El[0]
    end
    height = height/2
    width = width/2
@@ -60,7 +60,7 @@ graph.dot(model.fg, 'PredNet for whole sequence', 'graphs/wholeModel-batch')
 print('Batch test: ' .. sys.COLORS.green .. 'pass')
 
 local block
-local node = 12 -- block 1
+local node = 17 -- block 1
 for a, b in ipairs(prototype.forwardnodes) do
    if b.id == node then
       block = b.data.module
@@ -84,14 +84,14 @@ local function getInput(seq, height, width, L, channels, mode)
    end
    x[3] = torch.zeros(channels[1], height, width)                -- C1[0]
    x[4] = torch.zeros(channels[1], height, width)                -- H1[0]
-   x[5] = torch.zeros(2*channels[1], height, width)              -- E1[0]
+   x[5] = torch.zeros(channels[1], height, width)              -- E1[0]
 
    for l = 2, L do
       height = height/2
       width = width/2
       x[3*l]   = torch.zeros(channels[l], height, width)         -- C1[0]
       x[3*l+1] = torch.zeros(channels[l], height,width)          -- Hl[0]
-      x[3*l+2] = torch.zeros(2*channels[l], height, width)       -- El[0]
+      x[3*l+2] = torch.zeros(channels[l], height, width)       -- El[0]
    end
    height = height/2
    width = width/2

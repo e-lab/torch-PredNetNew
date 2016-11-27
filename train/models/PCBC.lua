@@ -2,7 +2,7 @@ local prednet = {}
 
 require 'nngraph'
 
---nngraph.setDebug(true)
+nngraph.setDebug(true)
 
 -- included local packages
 local RNN = paths.dofile('RNN.lua')
@@ -17,6 +17,8 @@ function prednet:__init(opt)
    self.saveGraph = opt.saveGraph or false
    self.dev = opt.dev or 'cpu'
    self.lstmLayer = opt.lstmLayer or 1
+
+   if self.saveGraph then paths.mkdir('graphs') end
 end
 
 -- Macros
@@ -114,9 +116,7 @@ local function block(l, L, iChannel, oChannel, vis)
                                  graphAttributes = gaAh}
 
    -- Error between A and A hat
-   local E = ({{A, Ah} - nn.CSubTable() - nn.ReLU(),
-              {Ah, A} - nn.CSubTable() - nn.ReLU()}
-             - nn.JoinTable(1, 3))
+   local E = ({A, Ah} - nn.CSubTable() - nn.ReLU())
              :annotate{name = 'E' .. layer, graphAttributes = gaE}
 
    local g
@@ -178,7 +178,7 @@ local function stackBlocks(L, channels, vis, lstmLayer)
       if l == L then upR = inputs[2] else upR = outputs[3*(l+1)] end
       c.upR = channels[l+1]
       E = inputs[3*l + 2]
-      c.E = 2 * channels[l]
+      c.E = channels[l]
       R = inputs[3*l + 1]
       c.R = channels[l]
 
@@ -214,7 +214,7 @@ local function stackBlocks(L, channels, vis, lstmLayer)
          outputs[1] = Ah:annotate{name = 'Prediction',
                                   graphAttributes = gaAh}
       else                    -- Rest of the blocks have only E as output
-         local iChannel = 2 * channels[l-1]
+         local iChannel = channels[l-1]
                               -- El-1,           Rl/Hl
          outputs[3*l+1] = ({outputs[3*(l-1)+1], outputs[3*l]}
                           - block(l, L, iChannel, oChannel, vis))
