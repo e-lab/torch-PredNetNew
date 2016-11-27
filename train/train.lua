@@ -3,9 +3,6 @@ local train = {}
 require 'optim'
 require 'image'
 
--- local packages
-local prednet = require 'models.prednet'
-
 function train:__init(opt)
    -- Model parameter
    self.layers = opt.layers
@@ -40,9 +37,14 @@ function train:__init(opt)
    self.channels = opt.channels
 
    -- Initialize model generator
-   prednet:__init(opt)
+   local model
+   if     opt.model == 'pred' then model = require 'models.prednet'
+   elseif opt.model == 'PCBC' then model = require 'models.PCBC'
+   else error('Model not supported.') end
+
+   model:__init(opt)
    -- Get the model unwrapped over time as well as the prototype
-   self.model, self.prototype = prednet:getModel()
+   self.model, self.prototype = model:getModel()
    self.criterion = nn.MSECriterion()       -- citerion to calculate loss
 
    if self.dev == 'cuda' then

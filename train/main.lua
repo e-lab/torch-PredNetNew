@@ -43,11 +43,11 @@ test:__init(opt)
 if not paths.dirp(opt.save) then paths.mkdir(opt.save) end
 local logger, testlogger
 logger = optim.Logger(paths.concat(opt.save,'error.log'))
-logger:setNames{'Prediction Error', 'Replica Error'}
+logger:setNames{'Train prd. error', 'Train rpl. error'} -- training prediction/replica
 logger:style{'+-', '+-'}
 logger:display(opt.display)
 testlogger = optim.Logger(paths.concat(opt.save,'testerror.log'))
-testlogger:setNames{'Test Prediction Error', 'Test Replica Error'}
+testlogger:setNames{'Test prd. error', 'Test rpl. error'} -- testing prd/rpl
 testlogger:style{'+-', '+-'}
 testlogger:display(opt.display)
 
