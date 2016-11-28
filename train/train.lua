@@ -86,20 +86,22 @@ function train:updateModel()
    -- Initial state/input of the network
    -- {imageSequence, RL+1, R1, E1, R2, E2, ..., RL, EL}
    local H0 = {}
-   H0[3] = torch.zeros(batch, channels[1], height, width)              -- C1[0]
-   H0[4] = torch.zeros(batch, channels[1], height, width)              -- H1[0]
-   H0[5] = torch.zeros(batch, 2*channels[1], height, width)            -- E1[0]
+   H0[3] = torch.Tensor()              -- C1[0]
+   height = height/2
+   width  = width/2
+   H0[4] = torch.zeros(batch, channels[2], height, width)              -- H1[0]
+   H0[5] = torch.zeros(batch, channels[2], height, width)            -- E1[0]
 
    for l = 2, L do
       height = height/2
       width  = width/2
-      H0[3*l]   = torch.zeros(batch, channels[l], height, width)       -- C1[0]
-      H0[3*l+1] = torch.zeros(batch, channels[l], height, width)       -- Hl[0]
-      H0[3*l+2] = torch.zeros(batch, 2*channels[l], height, width)     -- El[0]
+      H0[3*l]   = torch.Tensor()       -- C1[0]
+      H0[3*l+1] = torch.zeros(batch, channels[l+1], height, width)       -- Hl[0]
+      H0[3*l+2] = torch.zeros(batch, channels[l+1], height, width)     -- El[0]
    end
    height = height/2
    width  = width/2
-   H0[2] = torch.zeros(batch, channels[L+1], height, width)            -- RL+1
+   H0[2] = torch.zeros(batch, channels[L+2], height, width)            -- RL+1
 
    if self.dev == 'cuda' then
       for l = 2, 3*L+2 do
