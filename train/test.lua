@@ -63,17 +63,21 @@ function test:updateModel(model)
 
    -- Initial state/input of the network
    -- {imageSequence, RL+1, R1, E1, R2, E2, ..., RL, EL}
+   local c = channels[0] -- false for PredNet model
+   local m = c and 1 or 2 -- multiplier for double E maps
    local H0 = {}
-   H0[3] = torch.zeros(batch, channels[1], height, width)              -- C1[0]
+   H0[3] = c and torch.Tensor() or torch.zeros(batch, channels[1], height, width)
+   height = c and height/2 or height                                   -- C1[0]
+   width  = c and width/2 or width
    H0[4] = torch.zeros(batch, channels[1], height, width)              -- H1[0]
-   H0[5] = torch.zeros(batch, 2*channels[1], height, width)            -- E1[0]
+   H0[5] = torch.zeros(batch, m*channels[1], height, width)            -- E1[0]
 
    for l = 2, L do
       height = height/2
-      width  = width/2
-      H0[3*l]   = torch.zeros(batch, channels[l], height, width)       -- C1[0]
+      width  = width/2                                                 -- C1[0]
+      H0[3*l]   = c and torch.Tensor() or torch.zeros(batch, channels[l], height, width)
       H0[3*l+1] = torch.zeros(batch, channels[l], height, width)       -- Hl[0]
-      H0[3*l+2] = torch.zeros(batch, 2*channels[l], height, width)     -- El[0]
+      H0[3*l+2] = torch.zeros(batch, m*channels[l], height, width)     -- El[0]
    end
    height = height/2
    width  = width/2
@@ -93,10 +97,11 @@ function test:updateModel(model)
 
       -- Dimension seq x channels x height x width
       local xSeq = torch.Tensor()
-      xSeq:resize(batch, seq, channels[1], self.height, self.width)
+      c = c or channels[1] -- input channels
+      xSeq:resize(batch, seq, c, self.height, self.width)
       for i = itr, itr + batch - 1 do
          local tseq = self.dataset[shuffle[i]]  -- 1 -> 20 input image
-         xSeq[i-itr+1] = tseq:resize(1, seq, channels[1], self.height, self.width)
+         xSeq[i-itr+1] = tseq:resize(1, seq, c, self.height, self.width)
       end
 
       H0[1] = xSeq:clone()

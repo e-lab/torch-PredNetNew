@@ -26,11 +26,13 @@ local train = require 'train'
 local test  = require 'test'
 
 -- Input/Output channels for A of every layer
-opt.channels = torch.ones(opt.layers + 1)
-for l = 2, opt.layers + 1 do
-   opt.channels[l] = 2^(l+3)
+opt.channels = {}
+opt.channels[0] = opt.model == 'PCBC'
+for l = 1, opt.layers + 1 do
+   opt.channels[l] = 2^(l + (opt.channels[0] and 4 or 3))
 end
--- {1, 32, 64, 128, 256, 512}
+-- {[1]=1|3, 32, 64, 128, 256, 512} -> PredNet
+-- {[0]=1|3, 32, 64, 128, 256, 512} -> PCBC
 
 -- Sequence and resolution information of data
 -- is added to 'opt' during this initialization.
@@ -43,11 +45,11 @@ test:__init(opt)
 if not paths.dirp(opt.save) then paths.mkdir(opt.save) end
 local logger, testlogger
 logger = optim.Logger(paths.concat(opt.save,'error.log'))
-logger:setNames{'Prediction Error', 'Replica Error'}
+logger:setNames{'Train prd. error', 'Train rpl. error'} -- training prediction/replica
 logger:style{'+-', '+-'}
 logger:display(opt.display)
 testlogger = optim.Logger(paths.concat(opt.save,'testerror.log'))
-testlogger:setNames{'Test Prediction Error', 'Test Replica Error'}
+testlogger:setNames{'Test prd. error', 'Test rpl. error'} -- testing prd/rpl
 testlogger:style{'+-', '+-'}
 testlogger:display(opt.display)
 
