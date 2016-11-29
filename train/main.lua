@@ -38,7 +38,7 @@ end
 -- is added to 'opt' during this initialization.
 -- It also call the model generator and returns
 -- the model prototype
-local prototype = train:__init(opt)
+local prototype, w = train:__init(opt)
 test:__init(opt)
 
 -- Logger
@@ -71,9 +71,8 @@ for epoch = 1, opt.nEpochs do
    if treplicaError > tpredError then
       print('Save !')
       local saveLocation = paths.concat(opt.save, 'model-' .. epoch .. '.net')
-      prototype:float():clearState()
+      w:copy(train.w)
       torch.save(saveLocation, prototype)
-      if opt.dev == 'cuda' then train.model:cuda() end
       prevTrainError = tpredError
    end
 end

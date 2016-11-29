@@ -56,6 +56,7 @@ function train:__init(opt)
    model:__init(opt)
    -- Get the model unwrapped over time as well as the prototype
    self.model, self.prototype = model:getModel()
+   self.saveProto = self.prototype:clone() -- float saving prototype
    self.criterion = nn.MSECriterion()       -- citerion to calculate loss
 
    if self.dev == 'cuda' then
@@ -73,7 +74,7 @@ function train:__init(opt)
    self.w, self.dE_dw = self.model:getParameters()
    print("# of parameters " .. self.w:nElement())
 
-   return self.prototype
+   return self.saveProto, self.saveProto:getParameters()
 end
 
 
