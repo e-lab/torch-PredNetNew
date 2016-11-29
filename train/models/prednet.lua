@@ -17,6 +17,7 @@ local prednet = {}
 require 'nngraph'
 
 --nngraph.setDebug(true)
+local sf = string.format
 
 -- included local packages
 local convLSTM = paths.dofile('convLSTM.lua')
@@ -265,6 +266,7 @@ function prednet:getModel()
 
    local inputSequence = nn.Identity()()     -- Get input image as batch
    local RL_1 = nn.Identity()()              -- RL + 1 state which is always zero
+   RL_1:annotate{name = "RL+1[t]"}
 
    local H0 = {}                             -- Default Rl - El pairs
    local H = {}                              -- States linking seq 1 -> 2 -> ...
@@ -273,13 +275,13 @@ function prednet:getModel()
    for l = 1, 3*L do
       -- for annotation
       local styleColor = 'lightpink'
-      local nodeName = 'E Sequence(' .. seq .. '), Layer(' .. math.ceil(l/3) .. ')'
-      if l % 3 == 2 then
+      local nodeName = sf('E%d[0]', l/3)
+      if l % 3 == 1 then
          styleColor = 'springgreen'
-         nodeName = 'C Sequence(' .. seq .. '), Layer(' .. ((l+1)/3) .. ')'
-      elseif l % 3 == 0 then
+         nodeName = sf('C%d[0]', (l+2)/3)
+      elseif l % 3 == 2 then
          styleColor = 'burlywood'
-         nodeName = 'H Sequence(' .. seq .. '), Layer(' .. (l/3) .. ')'
+         nodeName = sf('R%d[0]', (l+1)/3)
       end
 
       -- Link being created between input states to hidden states
@@ -315,13 +317,13 @@ function prednet:getModel()
       if i < seq then
          for l = 1, 3*L do
             local styleColor = 'lightpink'
-            local nodeName = 'E Sequence(' .. seq .. '), Layer(' .. math.ceil(l/3) .. ')'
-            if l % 3 == 2 then
+            local nodeName = sf('E%d[%d]', l/3, i)
+            if l % 3 == 1 then
                styleColor = 'springgreen'
-               nodeName = 'C Sequence(' .. seq .. '), Layer(' .. ((l+1)/3) .. ')'
-            elseif l % 3 == 0 then
+               nodeName = sf('C%d[%d]', (l+2)/3, i)
+            elseif l % 3 == 2 then
                styleColor = 'burlywood'
-               nodeName = 'H Sequence(' .. seq .. '), Layer(' .. (l/3) .. ')'
+               nodeName = sf('R%d[%d]', (l+1)/3, i)
             end
 
             -- Pass state values to next sequence
