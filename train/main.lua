@@ -26,11 +26,13 @@ local train = require 'train'
 local test  = require 'test'
 
 -- Input/Output channels for A of every layer
-opt.channels = torch.ones(opt.layers + 2)
-for l = 2, opt.layers + 2 do
-   opt.channels[l] = 2^(l+3)
+opt.channels = {}
+opt.channels[0] = opt.model == 'PCBC'
+for l = 1, opt.layers + 1 do
+   opt.channels[l] = 2^(l + (opt.channels[0] and 4 or 3))
 end
--- {1|3, 32, 64, 128, 256, 512}
+-- {[1]=1|3, 32, 64, 128, 256, 512} -> PredNet
+-- {[0]=1|3, 32, 64, 128, 256, 512} -> PCBC
 
 -- Sequence and resolution information of data
 -- is added to 'opt' during this initialization.

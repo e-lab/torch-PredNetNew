@@ -175,11 +175,11 @@ local function stackBlocks(L, channels, vis, lstmLayer)
    -- Calculate RL-1 -> RL-2 -> ... -> R1
    for l = L, 1, -1 do
       if l == L then upR = inputs[2] else upR = outputs[3*(l+1)] end
-      c.upR = channels[l+2]
+      c.upR = channels[l+1]
       E = inputs[3*l + 2]
-      c.E = channels[l+1]
+      c.E = channels[l]
       R = inputs[3*l + 1]
-      c.R = channels[l+1]
+      c.R = channels[l]
 
       rnn = ({upR, R, E} - RNN.getModel(c, vis))
          :annotate{name = 'RNN ' .. l, graphAttributes = gaR}
@@ -195,8 +195,8 @@ local function stackBlocks(L, channels, vis, lstmLayer)
 -- Stack blocks to form the model for time t
 --------------------------------------------------------------------------------
    for l = 1, L do
-      local iC = channels[l]
-      local oC = channels[l+1]
+      local iC = channels[l-1]
+      local oC = channels[l]
 
 
       if l == 1 then          -- First layer block has E and Ah as output
@@ -216,7 +216,6 @@ local function stackBlocks(L, channels, vis, lstmLayer)
          outputs[1] = Ah:annotate{name = 'Prediction',
                                   graphAttributes = gaAh}
       else                    -- Rest of the blocks have only E as output
-         local iChannel = 2 * channels[l-1]
                               -- El-1,           Rl/Hl
          outputs[3*l+1] = ({outputs[3*(l-1)+1], outputs[3*l]}
                           - block(l, L, iC, oC, vis))

@@ -6,7 +6,7 @@
 
 local opt = {
    layers = 2, seq = 5, height = 8, width = 8, saveGraph = true,
-   channels = {3, 16, 32, 64}
+   channels = {[0]=3, 16, 32, 64}
 }
 local prednet = require '../PCBC'
 -- Initialize model generator
@@ -23,26 +23,26 @@ local function getBatchInput(b, seq, h, w, L, channels, mode)
    local x = {}
 
    if mode == 1 then
-      x[1] = torch.randn(b, channels[1], h, w)             -- Image
+      x[1] = torch.randn(b, channels[0], h, w)             -- Image
    elseif mode == 2 then
-      x[1] = torch.randn(b, seq, channels[1], h, w)        -- Image
+      x[1] = torch.randn(b, seq, channels[0], h, w)        -- Image
    end
    h = h/2
    w = w/2
    x[3] = torch.Tensor()                                   -- C1[0]
-   x[4] = torch.zeros(b, channels[2], h, w)                -- H1[0]
-   x[5] = torch.zeros(b, channels[2], h, w)                -- E1[0]
+   x[4] = torch.zeros(b, channels[1], h, w)                -- H1[0]
+   x[5] = torch.zeros(b, channels[1], h, w)                -- E1[0]
 
    for l = 2, L do
       h = h/2
       w = w/2
       x[3*l]   = torch.Tensor()                            -- C1[0]
-      x[3*l+1] = torch.zeros(b, channels[l+1], h,w)        -- Hl[0]
-      x[3*l+2] = torch.zeros(b, channels[l+1], h, w)       -- El[0]
+      x[3*l+1] = torch.zeros(b, channels[l], h,w)          -- Hl[0]
+      x[3*l+2] = torch.zeros(b, channels[l], h, w)         -- El[0]
    end
    h = h/2
    w = w/2
-   x[2] = torch.zeros(b, channels[L+2], h, w)              -- RL+1
+   x[2] = torch.zeros(b, channels[L+1], h, w)              -- RL+1
 
    return x
 end
