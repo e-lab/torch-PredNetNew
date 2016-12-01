@@ -17,6 +17,7 @@ function opts.parse(arg)
    --dmodel       (default predNet)             model directory name
    --net          (default 1)                   model number
    --layers       (default 3)                   # of layers in the model
+   --model        (default pred)                choose among [pred|PCBC]
 
    ## Device
    --dev          (default cuda)                Device to be used: cpu/cuda
