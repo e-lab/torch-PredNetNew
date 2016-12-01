@@ -56,7 +56,7 @@ local img, imgGPU, predImgGPU
 local winImg
 
 -- Input/Output channels for A of every layer
-channels = {}
+local channels = {}
 -- XXX Do not forget to change 1st channel number based on if it is RGB or gray-scale image
 channels[0] = 3
 for l = 1, opt.layers + 1 do
@@ -64,8 +64,9 @@ for l = 1, opt.layers + 1 do
 end
 -- {[0]=1|3, 32, 64, 128, 256, 512} -> PCBC
 
-   -- Initial states
-local H0 = require('init_PCBC')(height, width, L, opt.dev)
+-- Initial states
+local init = require('init_'..opt.model)
+local H0 = init(channels, height, width, L, opt.dev)
 local check = 0
 for itr = 1, dataset:size(1) do
 
@@ -118,7 +119,7 @@ for itr = 1, dataset:size(1) do
    }
    io.write("i: init, e: exit, <Return>: keep predicting: "); io.flush()
    local c = io.read()
-   if c == 'i' then H0 = require('init_PCBC')(height, width, L, opt.dev)
+   if c == 'i' then H0 = init(channels, height, width, L, opt.dev)
    elseif c == 'e' then break end
 end
 
