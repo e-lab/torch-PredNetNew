@@ -22,6 +22,11 @@ end
 
 torch.manualSeed(opt.seed)
 
+local cp = {}                                   -- Color Pallete
+cp.r     = '\27[31m'
+cp.g     = '\27[32m'
+cp.reset = '\27[0m'
+
 local train = require 'train'
 local test  = require 'test'
 
@@ -43,21 +48,23 @@ test:__init(opt)
 
 -- Logger
 if not paths.dirp(opt.save) then paths.mkdir(opt.save) end
+
 local logger, testlogger
 logger = optim.Logger(paths.concat(opt.save,'error.log'))
 logger:setNames{'Train prd. error', 'Train rpl. error'} -- training prediction/replica
 logger:style{'+-', '+-'}
 logger:display(opt.display)
+
 testlogger = optim.Logger(paths.concat(opt.save,'testerror.log'))
 testlogger:setNames{'Test prd. error', 'Test rpl. error'} -- testing prd/rpl
 testlogger:style{'+-', '+-'}
 testlogger:display(opt.display)
 
-print("\nTRAINING\n")
+print("\nTRAINING...")
 local prevTrainError = 10000
 
 for epoch = 1, opt.nEpochs do
-   print("Epoch: ", epoch)
+   print(cp.r .. "\nEpoch: ", epoch .. cp.reset)
    local predError, replicaError = train:updateModel()
    local tpredError, treplicaError = test:updateModel(train.model)
 
@@ -69,10 +76,11 @@ for epoch = 1, opt.nEpochs do
 
    -- Save the trained model
    if treplicaError > tpredError then
-      print('Save !')
       local saveLocation = paths.concat(opt.save, 'model-' .. epoch .. '.net')
       w:copy(train.w)
       torch.save(saveLocation, prototype)
+      print(cp.g .. 'Model saved!!!' .. cp.reset)
+
       prevTrainError = tpredError
    end
 end

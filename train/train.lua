@@ -63,11 +63,16 @@ function train:__init(opt)
       self.model:cuda()
       self.criterion:cuda()
 
+      local cp = {}                                   -- Color Pallete
+      cp.r     = '\27[31m'
+      cp.g     = '\27[32m'
+      cp.reset = '\27[0m'
+
       -- Use multiple GPUs
       local gpuList = {}
       for i = 1, opt.nGPU do gpuList[i] = i end
       self.model = nn.DataParallelTable(1, true, true):add(self.model:cuda(), gpuList)
-      print(opt.nGPU .. " GPUs being used")
+      print(cp.g .. '\n' .. opt.nGPU .. " GPUs being used" .. cp.reset)
    end
 
    -- Put model parameters into contiguous memory
@@ -89,12 +94,12 @@ function train:updateModel()
    local trainError = 0
    local interFrameError = 0
    local optimState = self.optimState
-   local L = self.layers
-   local channels = self.channels
-   local height = self.height
-   local width  = self.width
-   local seq = self.seq
-   local batch = self.batch
+   local L          = self.layers
+   local channels   = self.channels
+   local height     = self.height
+   local width      = self.width
+   local seq        = self.seq
+   local batch      = self.batch
 
    local dataSize = self.dataset:size(1)
    local shuffle = torch.randperm(dataSize)  -- Get shuffled index of dataset
