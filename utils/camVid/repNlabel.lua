@@ -207,7 +207,7 @@ local function forwardSeq(inputData, inputLabel, input, dirN)
       frameToDisp[1] = 255*frameToDisp[1]
       frameToDisp[3] = frameToDisp[1] + frameToDisp[2]
 
-      if paths.filep(labelPath) and n > 0 then
+      if paths.filep(labelPath) then
          win = image.display{image = frameToDisp, legend = 'Image / Label / Image+Label', win = win}
          -- io.read()
       end

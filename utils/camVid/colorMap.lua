@@ -64,11 +64,11 @@ local function prepCamVidColors(classes)
       if classes[i] == 'tunnel' then
          colors[i] = colorPalette[pur]
       elseif classes[i] == 'building' then
-         colors[i] = colorPalette[kha]
+         colors[i] = colorPalette[red]
       elseif classes[i] == 'bicyclist' then
          colors[i] = colorPalette[gre]
       elseif classes[i] == 'car' then
-         colors[i] = colorPalette[blu]
+         colors[i] = colorPalette[mag]
       elseif classes[i] == 'animal' then
          colors[i] = colorPalette[mag]
       elseif classes[i] == 'pedestrian' then
@@ -82,11 +82,11 @@ local function prepCamVidColors(classes)
       elseif classes[i] == 'miscText' then
          colors[i] = colorPalette[red]
       elseif classes[i] == 'otherMoving' then
-         colors[i] = colorPalette[whi]
+         colors[i] = colorPalette[mag]
       elseif classes[i] == 'road' then
-         colors[i] = colorPalette[bro]
+         colors[i] = colorPalette[gra]
       elseif classes[i] == 'sidewalk' then
-         colors[i] = colorPalette[neg]
+         colors[i] = colorPalette[blu]
       elseif classes[i] == 'signSymbol' then
          colors[i] = colorPalette[pin]
       elseif classes[i] == 'sky' then
@@ -94,7 +94,7 @@ local function prepCamVidColors(classes)
       elseif classes[i] == 'tree' then
          colors[i] = colorPalette[gre]
       elseif classes[i] == 'train' then
-         colors[i] = colorPalette[blu]
+         colors[i] = colorPalette[mag]
       elseif classes[i] == 'othermoving' then
          colors[i] = colorPalette[blu]
       elseif classes[i] == 'archway' then

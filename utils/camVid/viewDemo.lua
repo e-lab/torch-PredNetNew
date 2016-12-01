@@ -1,12 +1,13 @@
 --------------------------------------------------------------------------------
--- Prepare CamVid data, which can later be used to train decoder/classifier
+-- View the prediction of predictive network
+-- and the segmented output of the classifier
 --
--- Input is video frames used for training MatchNet
--- These frames are forwarded through MatchNet
--- Output for which labels exist are saved in a tensor,
--- which can be later used as input for the decoder for training.
+-- Input : Video files
+-- Output: Prediction + Segmentation
 --
--- Outputs are two tensors: Input and corresponding label
+-- Each frame is first fed into predictive network.
+-- Predicted frame is used only for viewing while learnt representation is fed
+-- to classifier to get segmented frame.
 --
 -- Abhishek Chaurasia
 --------------------------------------------------------------------------------
@@ -258,9 +259,8 @@ local function forwardSeq(input, dirN)
 
          -- Load current label
          local currentLabel = image.load(labelPath, 3, 'byte'):float()/255
-         -- Rescale label
          -----------------------------------------------------------------------
-         -- Actual label
+         -- Actual label (rescaled)
          -----------------------------------------------------------------------
          frameToDisp[2] = image.scale(currentLabel, imWidth, imHeight, 'simple')
       end
@@ -270,10 +270,10 @@ local function forwardSeq(input, dirN)
       frameToDisp[3] = frameToDisp[1] + frameToDisp[2]
 
       win = image.display{image = frameToDisp,
-                          legend = 'Image, Label, Image+Label / Future-frame, Prediction, Future-frame + Prediction',
+                          legend = 'Input, Label, Image+Label / Prediction, Segment, Input+Segment',
                           nrow = 3,
                           win = win}
-      -- io.read()
+
       img = frame.forward(img)
       n = n + 1
    end

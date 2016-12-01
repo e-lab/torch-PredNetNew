@@ -79,9 +79,8 @@ local function videoToTensor(input, dirN)
       end
       frameToDisp[3] = frameToDisp[1] + frameToDisp[2]
 
-      if (labelStart[1] - n) % 30 == 0 and n > 0 then
+      if paths.filep(labelPath) then
          win = image.display{image = frameToDisp, legend = 'Image / Label / Image+Label', win = win}
-         -- io.read()
       end
       img = frame.forward(img)
       n = n + 1
