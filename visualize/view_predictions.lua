@@ -67,7 +67,7 @@ end
 -- Initial states
 local init = require('init_'..opt.model)
 local H0 = init(channels, height, width, L, opt.dev)
-local check = 0
+local prime = true
 for itr = 1, dataset:size(1) do
 
    local frames = {}
@@ -109,7 +109,7 @@ for itr = 1, dataset:size(1) do
       frames[t+2*seqLength] = h[2][1]:clone()
 
       -- Copy output of previous prediction onto input
-      predImg:copy(h[2][1])
+      if not prime then predImg:copy(h[2][1]) else predImg = nil end
 
    end
    winImg = image.display{
@@ -117,9 +117,12 @@ for itr = 1, dataset:size(1) do
       legend = 'Original frames / Predicted frames / Imagined frames',
       nrow = batches, win = winImg, min = 0, max = 1,
    }
+   prime = false
    io.write("i: init, e: exit, <Return>: keep predicting: "); io.flush()
    local c = io.read()
-   if c == 'i' then H0 = init(channels, height, width, L, opt.dev)
+   if c == 'i' then
+      H0 = init(channels, height, width, L, opt.dev)
+      prime = true
    elseif c == 'e' then break end
 end
 
