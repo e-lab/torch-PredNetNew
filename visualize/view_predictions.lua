@@ -105,17 +105,22 @@ for itr = 1, dataset:size(1) do
       end
 
       -- Store all the input frames and predictions of one sequence
-      frames[t+1*seqLength] = h[1][1]:clone()
-      frames[t+2*seqLength] = h[2][1]:clone()
+      frames[t+1*seqLength] = (img - h[1][1]):abs() * 10
+      frames[t+2*seqLength] = h[1][1]:clone()
+      frames[t+3*seqLength] = h[2][1]:clone()
 
       -- Copy output of previous prediction onto input
       if not prime then predImg:copy(h[2][1]) else predImg = nil end
 
    end
+   local toDisplay = image.toDisplayTensor{
+      input = frames,
+      nrow = batches, min = 0, max = 1,
+   }
    winImg = image.display{
-      image = frames,
-      legend = 'Original frames / Predicted frames / Imagined frames',
-      nrow = batches, win = winImg, min = 0, max = 1,
+      image = toDisplay, win = winImg,
+      legend = 'Original frames / Prediction error / ' ..
+               'Predicted frames / Imagined frames',
    }
    prime = false
    io.write("i: init, e: exit, <Return>: keep predicting: "); io.flush()
