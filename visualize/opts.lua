@@ -27,6 +27,7 @@ function opts.parse(arg)
    --seed         (default 8)
    --nrow         (default 5)                   Images in one row
    -v                                           Verbose mode
+   --save                                       Save views to file
    ]]
 
    return opt

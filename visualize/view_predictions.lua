@@ -18,6 +18,10 @@ if opt.dev == 'cuda' then
    require 'cunn'
    require 'cudnn'
 end
+if opt.save then
+   require 'paths'
+   paths.mkdir('images')
+end
 
 torch.manualSeed(opt.seed)
 
@@ -122,6 +126,10 @@ for itr = 1, dataset:size(1) do
       legend = 'Original frames / Prediction error / ' ..
                'Predicted frames / Imagined frames',
    }
+   if opt.save then
+      local fileName = string.format('images/%s%02d.png', opt.model, itr)
+      image.savePNG(fileName, toDisplay)
+   end
    prime = false
    io.write("i: init, e: exit, <Return>: keep predicting: "); io.flush()
    local c = io.read()
