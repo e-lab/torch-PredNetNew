@@ -5,7 +5,7 @@ require 'nngraph'
 --nngraph.setDebug(true)
 
 -- included local packages
-local RNN = paths.dofile('RNN.lua')
+local RNN = paths.dofile('PCBC_RNN.lua')
 
 function prednet:__init(opt)
    -- Input/Output channels for A of every layer

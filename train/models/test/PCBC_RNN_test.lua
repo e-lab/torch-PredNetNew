@@ -4,7 +4,7 @@
 -- Alfredo Canziani, Nov 16
 --------------------------------------------------------------------------------
 
-local rnn = require '../RNN'
+local rnn = require '../PCBC_RNN'
 paths.mkdir('graphs')
 
 -- RNN.getModel(channels, vis), c: channels
