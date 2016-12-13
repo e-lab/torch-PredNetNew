@@ -25,6 +25,7 @@ function opts.parse(arg)
    --seq          (default 5)          number of sequence to look at
    --save         (default ./media/)   save model at this location
    --model        (default pred)       choose among [pred|PCBC]
+   --recursion    (string)             specify recursion [rnn|lstm]
 
    ## Graph
    --saveGraph                         save the graphs

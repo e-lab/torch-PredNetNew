@@ -20,7 +20,7 @@ require 'nngraph'
 local sf = string.format
 
 -- included local packages
-local convLSTM = paths.dofile('convLSTM.lua')
+local LSTM, RNN
 
 function prednet:__init(opt)
    -- Input/Output channels for A of every layer
@@ -34,6 +34,13 @@ function prednet:__init(opt)
    self.lstmLayer = opt.lstmLayer or 1
 
    if self.saveGraph then paths.mkdir('graphs') end
+   if opt.recursion == 'lstm' then
+      LSTM = paths.dofile('LSTM.lua')
+   elseif opt.recursion == 'rnn' then
+      RNN = paths.dofile('RNN.lua')
+   else
+      error('Recursion not available.')
+   end
 end
 
 -- Macros
@@ -187,29 +194,45 @@ local function stackBlocks(L, channels, vis, lstmLayer)
 -- Get Rl
 --------------------------------------------------------------------------------
 
-   local upR, R
-   local lstm = {}
+   local upR, R, E, C, rnn, lstm, X
+   local c = {}
 
    -- Calculate RL-1 -> RL-2 -> ... -> R1
    for l = L, 1, -1 do
-      if l == L then
-         upR = inputs[2] - nn.SpatialUpSamplingNearest(2)
-      else
-         upR = outputs[3*(l+1)] - nn.SpatialUpSamplingNearest(2)     -- Upsample prev Rl+1
+      E = inputs[3*l + 2]
+      if l == L then upR = inputs[2] else upR = outputs[3*(l+1)] end
+      C = inputs[3*l]
+      R = inputs[3*l + 1]
+      if LSTM then
+         upR = upR - nn.SpatialUpSamplingNearest(2)     -- Upsample prev Rl+1
+         X = {upR, E} - nn.JoinTable(1, 3)
+         c.X = channels[l+1] + 2 * channels[l]
+         c.C = channels[l]
+
+         lstm = ({X, C, R}
+                 - LSTM:getModel(c.X, c.C, lstmLayer))
+                       :annotate{name = 'LSTM ' .. l,
+                                 graphAttributes = gaR}
+
+         outputs[3*l-1] = (lstm - nn.SelectTable(1)):annotate{
+            name = 'C'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
+         }                    -- Cell State
+         outputs[3*l]   = (lstm - nn.SelectTable(2)):annotate{
+            name = 'R'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
+         }                    -- Hidden state
+      elseif RNN then
+         c.upR = channels[l+1]
+         c.E = 2 * channels[l]
+         c.R = channels[l]
+
+         rnn = ({upR, R, E} - RNN.getModel(c, vis))
+            :annotate{name = 'RNN ' .. l, graphAttributes = gaR}
+
+         outputs[3*l] = rnn
+
+         -- Bypass C when using RNN
+         outputs[3*l-1] = C
       end
-      R = {upR, inputs[3*l + 2]} - nn.JoinTable(1, 3)
-
-      lstm = ({R, inputs[3*l], inputs[3*l+1]}
-              - convLSTM:getModel(channels[l+1] + 2 * channels[l], channels[l], lstmLayer))
-                        :annotate{name = 'LSTM ' .. l,
-                                  graphAttributes = gaR}
-
-      outputs[3*l-1] = (lstm - nn.SelectTable(1)):annotate{
-         name = 'C'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
-      }                    -- Cell State
-      outputs[3*l]   = (lstm - nn.SelectTable(2)):annotate{
-         name = 'R'..l..'[t]', graphAttributes = {fontcolor = 'blue'}
-      }                    -- Hidden state
    end
 
 --------------------------------------------------------------------------------

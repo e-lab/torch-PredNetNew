@@ -2,9 +2,9 @@
 -- Notation is from https://github.com/oxford-cs-ml-2015/practical6/blob/master/LSTM.lua
 -- ConvLSTM with nngraph
 -- August 2016
-local convLSTM = {}
+local LSTM = {}
 
-function convLSTM:getModel(inDim, outDim, lstmLayer)
+function LSTM:getModel(inDim, outDim, lstmLayer)
    local sc = nn.SpatialConvolution
    local scNB = nn.SpatialConvolution:noBias()
    local sg = nn.Sigmoid
@@ -100,4 +100,4 @@ function convLSTM:getModel(inDim, outDim, lstmLayer)
    return g
 end
 
-return convLSTM
+return LSTM
