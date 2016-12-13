@@ -121,7 +121,7 @@ for itr = 1, dataset:size(1) do
    for l = 2, L do
       height = height/2
       width = width/2
-      H0[3*l]   = torch.zeros(channels[l], height, width)           -- C1[0]
+      H0[3*l]   = torch.zeros(channels[l], height, width)           -- Cl[0]
       H0[3*l+1] = torch.zeros(channels[l], height, width)           -- Hl[0]
       H0[3*l+2] = torch.zeros(2*channels[l], height, width)         -- El[0]
    end
