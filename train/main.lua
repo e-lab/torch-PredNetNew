@@ -32,7 +32,7 @@ local test  = require 'test'
 
 -- Input/Output channels for A of every layer
 opt.channels = {}
-opt.channels[0] = opt.model == 'PCBC'
+opt.channels[0] = (opt.model == ('PCBC' or 'PCBCD'))
 for l = 1, opt.layers + 1 do
    opt.channels[l] = 2^(l + (opt.channels[0] and 4 or 3))
 end
