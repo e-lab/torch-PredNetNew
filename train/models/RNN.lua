@@ -69,4 +69,74 @@ function RNN.getModel(channels, vis)
    return g
 end
 
+function RNN.getprjE(channels, vis)
+   -- Channels count
+   -- upR: channels.upR
+   -- R:   channels.R
+   -- E:   channels.E
+
+   local input = {}
+   input[1] = nn.Identity()():annotate{name = 'prjE'}
+   input[2] = nn.Identity()():annotate{name = 'R'}
+
+   local SC = nn.SpatialConvolution
+   local c = channels
+
+   local m = nn.ParallelTable()
+   -- Iden(prjE[t])
+   m:add(nn.Identity())
+   -- R[t-1] or Conv(R[t-1])
+   --  m:add(nn.Identity())
+   m:add(SC(c.R, c.R, 3, 3, 1, 1, 1, 1))
+
+   local n = nn.Sequential()
+   n:add(m)
+   n:add(nn.CAddTable(1, 1))
+   n:add(nn.ReLU())
+
+   local R = input - n
+   local g = nn.gModule(input, {R})
+
+   if vis then
+      graph.dot(g.fg, 'RNN', 'graphs/RNN')
+   end
+
+   return g
+end
+
+function RNN.getupR(channels, vis)
+   -- Channels count
+   -- upR: channels.upR
+   -- R:   channels.R
+   -- E:   channels.E
+
+   local input = {}
+   input[1] = nn.Identity()():annotate{name = 'upR'}
+   input[2] = nn.Identity()():annotate{name = 'R'}
+
+   local SC = nn.SpatialConvolution
+   local SFC = nn.SpatialFullConvolution
+   local c = channels
+
+   local m = nn.ParallelTable()
+   -- UpConv(upR[t])
+   m:add(SFC(c.upR, c.R, 3, 3, 2, 2, 1, 1, 1, 1))
+   -- Conv(R[t-1])
+   m:add(SC(c.R, c.R, 3, 3, 1, 1, 1, 1))
+
+   local n = nn.Sequential()
+   n:add(m)
+   n:add(nn.CAddTable(1, 1))
+   n:add(nn.ReLU())
+
+   local R = input - n
+   local g = nn.gModule(input, {R})
+
+   if vis then
+      graph.dot(g.fg, 'RNN', 'graphs/RNN')
+   end
+
+   return g
+end
+
 return RNN

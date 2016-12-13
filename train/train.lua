@@ -50,7 +50,9 @@ function train:__init(opt)
    -- Initialize model generator
    local model
    if     opt.model == 'pred' then model = require 'models.prednet'
+   elseif opt.model == 'predD' then model = require 'models.prednetD'
    elseif opt.model == 'PCBC' then model = require 'models.PCBC'
+   elseif opt.model == 'PCBCD' then model = require 'models.PCBCD'
    else error('Model not supported.') end
 
    model:__init(opt)
@@ -166,6 +168,7 @@ function train:updateModel()
          -- Forward pass
 --------------------------------------------------------------------------------
          -- Output is table of all predictions
+--  assert(#H0==10, 'Dimension error')
          h = model:forward(H0)
          -- Merge all the predictions into a batch from 2 -> LAST sequence
          --       Table of 2         Batch of 2
