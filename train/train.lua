@@ -134,6 +134,12 @@ function train:updateModel()
       end
    end
 
+   -- Dimension seq x channels x height x width
+   c = c or channels[1] -- input channels
+   H0[1] = torch.Tensor(batch, seq, c, self.height, self.width)
+   if self.dev == 'cuda' then H0[1] = H0[1]:cuda() end
+   local prediction = H0[1]:clone()
+
    for itr = 1, dataSize, batch do
       if itr + batch > dataSize then
          break
@@ -141,25 +147,12 @@ function train:updateModel()
 
       xlua.progress(itr, dataSize)
 
-      -- Dimension seq x channels x height x width
-      local xSeq = torch.Tensor()
-      c = c or channels[1] -- input channels
-      xSeq:resize(batch, seq, c, self.height, self.width)
       for i = itr, itr + batch - 1 do
          local tseq = self.dataset[shuffle[i]]  -- 1 -> 20 input image
-         xSeq[i-itr+1] = tseq:resize(1, seq, c, self.height, self.width)
+         H0[1][i-itr+1]:copy(tseq:resize(1, seq, c, self.height, self.width))
       end
 
-      H0[1] = xSeq:clone()
-
-      local h = {}
-      local prediction = xSeq:clone()
-
-      if self.dev == 'cuda' then
-         prediction = prediction:cuda()
-         xSeq = xSeq:cuda()
-         H0[1] = H0[1]:cuda()
-      end
+      local h
 
       local eval_E = function()
 --------------------------------------------------------------------------------
@@ -170,11 +163,12 @@ function train:updateModel()
          -- Merge all the predictions into a batch from 2 -> LAST sequence
          --       Table of 2         Batch of 2
          -- {(64, 64), (64, 64)} -> (2, 64, 64)
+         prediction:select(2, 1):copy(H0[1]:select(2, 1))
          for i = 2, #h do
             prediction:select(2, i):copy(h[i])
          end
 
-         local err = criterion:forward(prediction, xSeq)
+         local err = criterion:forward(prediction, H0[1])
 
          -- Reset gradParameters
          model:zeroGradParameters()
@@ -182,10 +176,10 @@ function train:updateModel()
 --------------------------------------------------------------------------------
          -- Backward pass
 --------------------------------------------------------------------------------
-         local dE_dh = criterion:backward(prediction, xSeq)
+         local dE_dh = criterion:backward(prediction, H0[1])
 
          -- model:backward() expects dE_dh to be a table of sequence length
-         -- Since 1st frame was ignored while calculating error (prediction[1] = xSeq[1]),
+         -- Since 1st frame was ignored while calculating error (prediction[1] = H0[1][1]),
          -- 1st tensor in dE_dhTable is just a zero tensor
          local dE_dhTable = {}
          dE_dhTable[1] = dE_dh:select(2, 1):clone():zero()
@@ -198,7 +192,7 @@ function train:updateModel()
          -- Display last prediction of every sequence
          if self.display then
             self.dispWin = image.display{
-               image=torch.cat(xSeq:select(2, seq), prediction:select(2, seq), 4),
+               image=torch.cat(H0[1]:select(2, seq), prediction:select(2, seq), 4),
                legend='Train - Real | Pred',
                win = self.dispWin,
                nrow = 1,
@@ -213,7 +207,7 @@ function train:updateModel()
 
       trainError = trainError + err[1]
       interFrameError = interFrameError +
-         criterion:forward(prediction:select(2, seq), xSeq:select(2, seq-1))
+         criterion:forward(prediction:select(2, seq), H0[1]:select(2, seq-1))
    end
 
    -- Calculate time taken by 1 epoch
