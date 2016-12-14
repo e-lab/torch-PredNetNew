@@ -30,6 +30,7 @@ function test:__init(opt)
    self.seq    = self.dataset:size(2)
    self.height = self.dataset:size(4)
    self.width  = self.dataset:size(5)
+   self.shuffle    = opt.shuffle
 
    self.criterion = nn.MSECriterion()       -- citerion to calculate loss
 
@@ -57,7 +58,12 @@ function test:updateModel(model)
    local batch = self.batch
 
    local dataSize = self.dataset:size(1)
-   local shuffle = torch.randperm(dataSize)  -- Get shuffled index of dataset
+   local shuffle
+   if self.shuffle then
+      shuffle = torch.randperm(dataSize)  -- Get shuffled index of dataset
+   else
+      shuffle = torch.range(1, dataSize)
+   end
 
    local time = sys.clock()
 

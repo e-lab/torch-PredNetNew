@@ -16,9 +16,9 @@ function opts.parse(arg)
    --lstmLayer    (default 1)
 
    ## Dataset
-   --datapath     (default /media/)
-                  path for train and test data
+   --datapath     (default /media/) path for train and test data
    --batch        (default 5)          number of batch size
+   --shuffle                           shuffle training data set
 
    ## Model
    --layers       (default 3)          number of layers in the model

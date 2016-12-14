@@ -38,6 +38,7 @@ function train:__init(opt)
    opt.channels[opt.channels[0] and 0 or 1] = self.dataset:size(3)
    self.height     = self.dataset:size(4)
    self.width      = self.dataset:size(5)
+   self.shuffle    = opt.shuffle
 
    opt.seq    = self.seq
    opt.height = self.height
@@ -102,7 +103,12 @@ function train:updateModel()
    local batch      = self.batch
 
    local dataSize = self.dataset:size(1)
-   local shuffle = torch.randperm(dataSize)  -- Get shuffled index of dataset
+   local shuffle
+   if self.shuffle then
+      shuffle = torch.randperm(dataSize)  -- Get shuffled index of dataset
+   else
+      shuffle = torch.range(1, dataSize)
+   end
 
    local time = sys.clock()
 
