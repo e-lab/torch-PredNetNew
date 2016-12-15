@@ -6,6 +6,7 @@
 
 local opt = {
    layers = 2, seq = 5, height = 8, width = 8, saveGraph = true,
+   recursion = 'lstm',
    channels = {3, 16, 32}
 }
 local prednet = require '../prednet'
