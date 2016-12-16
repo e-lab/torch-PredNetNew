@@ -337,23 +337,23 @@ function prednet:getModel()
                                                           graphAttributes = gaAh}
 
       -- Rest of the {Cl, Hl, El} pairs are reused as {Cl[t-1], Hl[t-1], El[t-1]}
-      if i < seq then
-         for l = 1, 3*L do
-            local styleColor = 'lightpink'
-            local nodeName = sf('E%d[%d]', l/3, i)
-            if l % 3 == 1 then
-               styleColor = 'springgreen'
-               nodeName = sf('C%d[%d]', (l+2)/3, i)
-            elseif l % 3 == 2 then
-               styleColor = 'burlywood'
-               nodeName = sf('R%d[%d]', (l+1)/3, i)
-            end
-
-            -- Pass state values to next sequence
-            H[l] = nn.SelectTable(l+1)(tempStates):annotate{
-               name = nodeName, graphAttributes = {
-                  style = 'filled', fillcolor = styleColor}}
+      for l = 1, 3*L do
+         local layer = math.ceil(l/3)
+         local styleColor = 'lightpink'
+         local nodeName = sf('E%d[%d]', layer, i)
+         if l % 3 == 1 then
+            styleColor = 'springgreen'
+            nodeName = sf('C%d[%d]', layer, i)
+         elseif l % 3 == 2 then
+            styleColor = 'burlywood'
+            nodeName = sf('R%d[%d]', layer, i)
          end
+         local node = nn.SelectTable(l+1)(tempStates):annotate{
+            name = nodeName, graphAttributes = {
+               style = 'filled', fillcolor = styleColor}}
+
+         -- Pass state values to next sequence
+         if i < seq then H[l] = node else outputs[i+l] = node end
       end
    end
 

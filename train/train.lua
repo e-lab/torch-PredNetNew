@@ -103,12 +103,8 @@ function train:updateModel()
    local batch      = self.batch
 
    local dataSize = self.dataset:size(1)
-   local shuffle
-   if self.shuffle then
-      shuffle = torch.randperm(dataSize)  -- Get shuffled index of dataset
-   else
-      shuffle = torch.range(1, dataSize)
-   end
+   local s = self.shuffle
+   local shuffle = s and torch.randperm(dataSize) or torch.range(1, dataSize)
 
    local time = sys.clock()
 
@@ -145,6 +141,7 @@ function train:updateModel()
    H0[1] = torch.Tensor(batch, seq, c, self.height, self.width)
    if self.dev == 'cuda' then H0[1] = H0[1]:cuda() end
    local prediction = H0[1]:clone()
+   local H = {}; for i = 1, #H0 do H[i] = H0[i] end
 
    for itr = 1, dataSize, batch do
       if itr + batch > dataSize then
@@ -165,13 +162,15 @@ function train:updateModel()
          -- Forward pass
 --------------------------------------------------------------------------------
          -- Output is table of all predictions
-         h = model:forward(H0)
+         -- T = seq
+         -- {Y1, ..., YT, C1, H1, E1, ..., CL, HL, EL}, # = T + 3*L
+         h = model:forward(H)
          -- Merge all the predictions into a batch from 2 -> LAST sequence
          --       Table of 2         Batch of 2
          -- {(64, 64), (64, 64)} -> (2, 64, 64)
-         prediction:select(2, 1):copy(H0[1]:select(2, 1))
-         for i = 2, #h do
-            prediction:select(2, i):copy(h[i])
+         for i = 1, seq do prediction:select(2, i):copy(h[i]) end
+         if self.shuffle or iter == 1 then -- Ignore 1st pred if shuffle or 1st
+            prediction:select(2, 1):copy(H0[1]:select(2, 1))
          end
 
          local err = criterion:forward(prediction, H0[1])
@@ -188,12 +187,12 @@ function train:updateModel()
          -- Since 1st frame was ignored while calculating error (prediction[1] = H0[1][1]),
          -- 1st tensor in dE_dhTable is just a zero tensor
          local dE_dhTable = {}
-         dE_dhTable[1] = dE_dh:select(2, 1):clone():zero()
-         for i = 2, seq do
-            dE_dhTable[i] = dE_dh:select(2, i)
-         end
+         for i = 1, seq do dE_dhTable[i] = dE_dh:select(2, i) end
+         for i = 1, 3*L do dE_dhTable[seq+i] = H0[2+i] end
 
-         model:backward(H0, dE_dhTable)
+         model:backward(H, dE_dhTable)
+
+         if not self.shuffle then for i = 1, 3*L do H[2+i] = h[seq+i] end end
 
          -- Display last prediction of every sequence
          if self.display then
@@ -223,7 +222,7 @@ function train:updateModel()
    print("\nTraining Error: " .. trainError)
    print("Time taken to learn 1 sample: " .. (time*1000/dataSize) .. "ms")
 
-   collectgarbage()
+   --collectgarbage()
    return trainError, interFrameError
 end
 

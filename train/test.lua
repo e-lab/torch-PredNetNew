@@ -58,12 +58,8 @@ function test:updateModel(model)
    local batch = self.batch
 
    local dataSize = self.dataset:size(1)
-   local shuffle
-   if self.shuffle then
-      shuffle = torch.randperm(dataSize)  -- Get shuffled index of dataset
-   else
-      shuffle = torch.range(1, dataSize)
-   end
+   local s = self.shuffle
+   local shuffle = s and torch.randperm(dataSize) or torch.range(1, dataSize)
 
    local time = sys.clock()
 
@@ -100,6 +96,7 @@ function test:updateModel(model)
    H0[1] = torch.Tensor(batch, seq, c, self.height, self.width)
    if self.dev == 'cuda' then H0[1] = H0[1]:cuda() end
    local prediction = H0[1]:clone()
+   local H = {}; for i = 1, #H0 do H[i] = H0[i] end
 
    for itr = 1, dataSize, batch do
       if itr + batch > dataSize then
@@ -119,14 +116,15 @@ function test:updateModel(model)
       -- Forward pass
 -----------------------------------------------------------------------------
       -- Output is table of all predictions
-      h = model:forward(H0)
+      h = model:forward(H)
       -- Merge all the predictions into a batch from 2 -> LAST sequence
       --       Table of 2         Batch of 2
       -- {(64, 64), (64, 64)} -> (2, 64, 64)
-      prediction:select(2, 1):copy(H0[1]:select(2, 1))
-      for i = 2, #h do
-         prediction:select(2, i):copy(h[i])
+      for i = 1, seq do prediction:select(2, i):copy(h[i]) end
+      if self.shuffle or iter == 1 then -- Ignore 1st pred if shuffle or 1st
+         prediction:select(2, 1):copy(H0[1]:select(2, 1))
       end
+      if not self.shuffle then for i = 1, 3*L do H[2+i] = h[seq+i] end end
 
       err = criterion:forward(prediction, H0[1])
 
@@ -152,7 +150,7 @@ function test:updateModel(model)
    print("\nTest Error: " .. testError)
    print("Time taken to learn 1 sample: " .. (time*1000/dataSize) .. "ms")
 
-   collectgarbage()
+   --collectgarbage()
    return testError, interFrameError
 end
 
