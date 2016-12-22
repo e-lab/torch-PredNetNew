@@ -2,9 +2,9 @@ require 'image'
 require 'xlua'
 
 -- Input video to be converted into a tensor
-local dirRoot = '/media/HDD1/Datasets2/originalDatasets/CamVid/largeInput/'
+local dirRoot = '/Users/abhi/Documents/Workspace/Dataset/'
 -- Location to save the tensor
-local cachepath = '/media/HDD1/Models/MatchNet/CamVid/large/'
+local cachepath = './'
 
 local cacheDir  = paths.concat(cachepath, 'vid2Ten')
 local saveTrain = paths.concat(cachepath, 'vid2Ten', 'trainData.t7')
@@ -20,7 +20,7 @@ if not paths.dirp(cacheDir) then paths.mkdir(cacheDir) end
 local imHeight = 128
 local imWidth = 192
 local seqLength = 5
-local trainTestRatio = 4                  -- train/test
+local trainRatio = 0.8                  -- train/total data
 
 -- Function to check if the given file is a valid video
 local function validVideo(filename)
@@ -56,18 +56,16 @@ local frameSeqTrain, frameSeqTest
 local function videoToTensor(input)
    -- source height and width gets updated by __init based on the input video
    frame:init(input, source)
-   local nFrames = frame.nFrames() or 2000          -- # of total frames in the video
+   local nFrames = frame.nFrames() or 2000         -- # of total frames in the video
 
    local currentFrame = torch.FloatTensor(1, seqLength, 3, imHeight, imWidth):zero()
 
    local img = frame.forward(img)
-
+   local trc = trainRatio * nFrames                -- # of training frames
    --------------------------------------------------------------------------------
    -- Section to convert image into tensor
    local n = 1                 -- Counter for progress bar
    local count = 1             -- Counter for how many frames have been added to one sequence
-   local switchFlag  = 'train'
-   local switchCount = 1
 
    while img and n <= nFrames do
       xlua.progress(n, nFrames)
@@ -76,16 +74,11 @@ local function videoToTensor(input)
 
       if count == seqLength then
          count = 1
-         if switchFlag == 'train' then
+         if n <= trc then
             if frameSeqTrain then   -- Concat current seq to the output tensor
                frameSeqTrain = frameSeqTrain:cat(currentFrame, 1)
             else                    -- When it is first seq then just put it in the output tensor
                frameSeqTrain = currentFrame:clone()
-            end
-
-            switchCount = switchCount + 1
-            if switchCount > trainTestRatio then
-               switchFlag = 'test'
             end
          else
             if frameSeqTest then   -- Concat current seq to the output tensor
@@ -93,9 +86,6 @@ local function videoToTensor(input)
             else                    -- When it is first seq then just put it in the output tensor
                frameSeqTest = currentFrame:clone()
             end
-
-            switchCount = 1
-            switchFlag = 'train'
          end
       else
          count = count + 1
@@ -136,7 +126,8 @@ end
 print("Conversion from video to tensor completed.")
 print("\n# of training chunks created: " .. frameSeqTrain:size(1))
 print("\n# of testing chunks created: " .. frameSeqTest:size(1))
-print("\nSaving tensor to location: " .. saveTrain)
+print("\nSaved train data at: " .. saveTrain)
+print("\nSaved test  data at: " .. saveTest)
 torch.save(saveTrain, frameSeqTrain)
 torch.save(saveTest,  frameSeqTest)
 print(green .. "Tensor saved successfully!!!" .. resetCol)
