@@ -1,4 +1,4 @@
-# MatchNet
+# Torch7 PredNet implementation
 
 This repository is a `Torch` implementation of the paper [Deep Predictive Coding Networks for Video Prediction and Unsupervised Learning](https://arxiv.org/abs/1605.08104).
 We are looking forward to further improve this network.
